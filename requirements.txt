@@ -6,4 +6,4 @@ matplotlib
 streamlit-aggrid
 scipy
 tensorflow
-surprise
+scikit-surprise==1.1.3
