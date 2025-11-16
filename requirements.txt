@@ -5,6 +5,4 @@ scikit-learn
 matplotlib
 streamlit-aggrid
 scipy
-tensorflow-cpu
-setuptools<71.0.0
-git+https://github.com/NicolasHug/Surprise.git@master
+tensorflow
