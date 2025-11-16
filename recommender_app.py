@@ -357,9 +357,9 @@ elif model_selection == backend.models[4]:
             st.session_state.knn_state['run_requested'] = False
 
     # Display results if available
-    #if st.session_state.knn_state['completed']:
-     #   st.success("✅ KNN finished!")
-      #  st.dataframe(st.session_state.knn_state['df'])
+    if st.session_state.knn_state['completed']:
+        st.success("✅ KNN finished!")
+        st.dataframe(st.session_state.knn_state['df'])
 #elif model_selection == backend.models[5]:
  #   if st.sidebar.button("▶️ Train & Recommend (NMF)", key="run_nmf_btn"):
   #      if not st.session_state.get('test_user_id'):
@@ -374,7 +374,7 @@ elif model_selection == backend.models[4]:
         #        recs = backend.nmf_recommendations(user_id, params["top_k"])
                 
                 # Prepare results
-                results = []
+               results = []
                 for cid, score in recs.items():
                     results.append({
                         'USER': user_id,
