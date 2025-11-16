@@ -281,7 +281,7 @@ models = ("Course Similarity",
           "Clustering",
           "Clustering with PCA",
           "KNN",
-          "NMF",
+          #"NMF",
           "Neural Network",
           "Regression with Embedding Features",
           "Classification with Embedding Features")
@@ -533,10 +533,10 @@ def add_new_ratings(new_courses):
     return new_id
 
 # NMF Model functions
-NMF_MODEL = None
-NMF_TRAINSET = None
+#NMF_MODEL = None
+#NMF_TRAINSET = None
 
-def train_nmf_model(n_factors=32, n_epochs=50):
+#def train_nmf_model(n_factors=32, n_epochs=50):
     """Train and cache the NMF model"""
     global NMF_MODEL, NMF_TRAINSET
     print("🚀 Training NMF model...")
@@ -557,7 +557,7 @@ def train_nmf_model(n_factors=32, n_epochs=50):
     print(f"✅ NMF trained in {time.time() - start_time:.2f}s | Factors: {n_factors} | Epochs: {n_epochs}")
     return model, trainset
 
-def nmf_recommendations(user_id, top_k):
+#def nmf_recommendations(user_id, top_k):
     """Generate recommendations using NMF"""
     if NMF_MODEL is None or NMF_TRAINSET is None:
         raise ValueError("NMF model not trained! Call train_nmf_model first")
