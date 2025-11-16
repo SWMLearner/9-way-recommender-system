@@ -374,18 +374,18 @@ elif model_selection == backend.models[4]:
         #        recs = backend.nmf_recommendations(user_id, params["top_k"])
                 
                 # Prepare results
-               results = []
-                for cid, score in recs.items():
-                    results.append({
-                        'USER': user_id,
-                        'COURSE_ID': cid,
-                        'COURSE_TITLE': backend.get_title_map().get(cid, "Unknown Course"),
-                        'SCORE': score
-                    })
+               #results = []
+                #for cid, score in recs.items():
+                 #   results.append({
+                  #      'USER': user_id,
+                   #     'COURSE_ID': cid,
+                    #    'COURSE_TITLE': backend.get_title_map().get(cid, "Unknown Course"),
+                     #   'SCORE': score
+                    #})
                 
-                df = pd.DataFrame(results)
-                st.subheader("📚 NMF Recommendations")
-                st.dataframe(df)
+                #df = pd.DataFrame(results)
+                #st.subheader("📚 NMF Recommendations")
+                #st.dataframe(df)
 
 elif model_selection == backend.models[6]:
     if st.sidebar.button("▶️ Train & Recommend (Neural Network)", key="run_nn_btn"):
