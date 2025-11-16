@@ -13,7 +13,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 import scipy.sparse as sp
 from collections import defaultdict
-from surprise import NMF, Reader, Dataset, accuracy
+#from surprise import NMF, Reader, Dataset, accuracy
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
