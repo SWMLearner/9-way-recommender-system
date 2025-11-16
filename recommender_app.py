@@ -134,7 +134,7 @@ def init__recommender_app():
         }
     
     # Process selected courses
-    if response["selected_rows"]:
+    if response["selected_rows"] is not None and len(response["selected_rows"]) > 0:
         results = pd.DataFrame(response["selected_rows"], columns=['COURSE_ID', 'TITLE', 'DESCRIPTION'])
         results = results[['COURSE_ID', 'TITLE']]
         st.session_state.user_courses = results['COURSE_ID'].tolist()
