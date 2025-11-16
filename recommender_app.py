@@ -224,12 +224,12 @@ elif model_selection == backend.models[4]:
     params = {"n_neighbors": n_neighbors, "top_k": top_k}
 
 # NMF model
-elif model_selection == backend.models[5]:
-    st.sidebar.subheader("NMF Parameters")
-    n_factors = st.sidebar.slider("Latent Factors", 10, 100, 32, step=1)
-    n_epochs = st.sidebar.slider("Training Epochs", 10, 100, 50, step=5)
-    top_k = st.sidebar.slider("Top-K Recommendations", 1, 20, 5, step=1)
-    params = {"n_factors": n_factors, "n_epochs": n_epochs, "top_k": top_k}
+#elif model_selection == backend.models[5]:
+ #   st.sidebar.subheader("NMF Parameters")
+  #  n_factors = st.sidebar.slider("Latent Factors", 10, 100, 32, step=1)
+   # n_epochs = st.sidebar.slider("Training Epochs", 10, 100, 50, step=5)
+    #top_k = st.sidebar.slider("Top-K Recommendations", 1, 20, 5, step=1)
+    #params = {"n_factors": n_factors, "n_epochs": n_epochs, "top_k": top_k}
 
 # Neural Network model
 elif model_selection == backend.models[6]:
@@ -360,18 +360,18 @@ elif model_selection == backend.models[4]:
     if st.session_state.knn_state['completed']:
         st.success("✅ KNN finished!")
         st.dataframe(st.session_state.knn_state['df'])
-elif model_selection == backend.models[5]:
-    if st.sidebar.button("▶️ Train & Recommend (NMF)", key="run_nmf_btn"):
-        if not st.session_state.get('test_user_id'):
-            st.warning("Please create a test user first!")
-        else:
-            user_id = st.session_state.test_user_id
-            with st.spinner("Training NMF model and generating recommendations..."):
+#elif model_selection == backend.models[5]:
+ #   if st.sidebar.button("▶️ Train & Recommend (NMF)", key="run_nmf_btn"):
+  #      if not st.session_state.get('test_user_id'):
+   #         st.warning("Please create a test user first!")
+    #    else:
+     #       user_id = st.session_state.test_user_id
+      #      with st.spinner("Training NMF model and generating recommendations..."):
                 # Train model
-                backend.train_nmf_model(params["n_factors"], params["n_epochs"])
+       #         backend.train_nmf_model(params["n_factors"], params["n_epochs"])
                 
                 # Get recommendations
-                recs = backend.nmf_recommendations(user_id, params["top_k"])
+        #        recs = backend.nmf_recommendations(user_id, params["top_k"])
                 
                 # Prepare results
                 results = []
@@ -386,7 +386,7 @@ elif model_selection == backend.models[5]:
                 df = pd.DataFrame(results)
                 st.subheader("📚 NMF Recommendations")
                 st.dataframe(df)
-# Update the neural network section
+
 elif model_selection == backend.models[6]:
     if st.sidebar.button("▶️ Train & Recommend (Neural Network)", key="run_nn_btn"):
         if not st.session_state.get('test_user_id'):
