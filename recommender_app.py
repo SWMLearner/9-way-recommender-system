@@ -374,7 +374,7 @@ elif model_selection == backend.models[4]:
         #        recs = backend.nmf_recommendations(user_id, params["top_k"])
                 
                 # Prepare results
-                results = []
+               results = []
                 for cid, score in recs.items():
                     results.append({
                         'USER': user_id,
