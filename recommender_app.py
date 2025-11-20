@@ -513,7 +513,9 @@ elif model_selection == backend.models[3]:
                 st.write(f"**PCA Explained Variance:**")
                 for i, variance in enumerate(explained_variance):
                     st.write(f"  - PC{i+1}: {variance:.1%}")
-                st.write(f"**Total Variance Explained:** {sum(explained_variance):.1%}")elif model_selection == backend.models[4]:
+                st.write(f"**Total Variance Explained:** {sum(explained_variance):.1%}")
+            
+elif model_selection == backend.models[4]:
     # Button to request KNN execution
     if st.sidebar.button("▶️ Recommend with Item-KNN", key="run_knn_btn"):
         st.session_state.knn_state['run_requested'] = True
