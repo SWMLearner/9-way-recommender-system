@@ -413,7 +413,6 @@ def create_user_profile(user_id):
     
     return profile
 def user_profile_recommendations(user_id, sim_threshold, top_courses=None):
-    """Generate recommendations based on user profile similarity"""
     course_vectors = load_course_vectors()
     idx_id_dict, id_idx_dict = get_doc_dicts()
     ratings = load_ratings()
@@ -421,7 +420,6 @@ def user_profile_recommendations(user_id, sim_threshold, top_courses=None):
     enrolled_course_ids = user_ratings['item'].tolist()
     all_courses = set(idx_id_dict.values())
     unselected_course_ids = all_courses.difference(enrolled_course_ids)
-    
     user_profile = create_user_profile(user_id)
     
     # Normalize the user profile
@@ -454,13 +452,13 @@ def user_profile_recommendations(user_id, sim_threshold, top_courses=None):
     
     # Sort by similarity score (descending) and limit to top_courses
     sorted_recommendations = dict(sorted(recommendations.items(), key=lambda item: item[1], reverse=True))
+    
+    if top_courses is not None:
+        sorted_recommendations = dict(list(sorted_recommendations.items())[:top_courses])
     print(f"User profile norm: {np.linalg.norm(user_profile)}")
     print(f"Sample candidate vector: {candidate_vec_normalized[:5]}")  # First 5 elements
     print(f"Similarity scores sample: {list(recommendations.values())[:5]}")
 
-    if top_courses is not None:
-        sorted_recommendations = dict(list(sorted_recommendations.items())[:top_courses])
-    
     return sorted_recommendations
     
 def train_clustering(n_clusters):
