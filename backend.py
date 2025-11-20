@@ -174,7 +174,7 @@ def is_user_in_fixed_embeddings(user_id):
     
 
 
-# ... existing code ...
+
 
 def train_classification_with_embeddings():
     global CLASSIFICATION_MODEL, CLASSIFICATION_LABEL_ENCODER
@@ -256,7 +256,7 @@ def classification_with_embeddings_recommendations(user_id, top_k):
         logger.error(f"CLASSIFICATION ERROR: {str(e)}", exc_info=True)
         return {}
         
-# ... existing code ...
+
 # URL for test‐user ratings used by the PCA‐based model
 TEST_USER_URL = (
     "https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/"
@@ -363,7 +363,7 @@ def get_doc_dicts():
             
     return IDX_ID_DICT, ID_IDX_DICT
 
-def course_similarity_recommendations(idx_id_dict, id_idx_dict, enrolled_course_ids, sim_matrix):
+def course_similarity_recommendations(idx_id_dict, id_idx_dict, enrolled_course_ids, sim_matrix, sim_threshold=0.0, top_k=None):
     all_courses = set(idx_id_dict.values())
     unselected_course_ids = all_courses.difference(enrolled_course_ids)
     res = {}
@@ -376,9 +376,17 @@ def course_similarity_recommendations(idx_id_dict, id_idx_dict, enrolled_course_
                 continue
             candidate_idx = id_idx_dict[candidate_course]
             sim = sim_matrix[enrolled_idx][candidate_idx]
-            if candidate_course not in res or sim > res[candidate_course]:
-                res[candidate_course] = sim
-    return dict(sorted(res.items(), key=lambda item: item[1], reverse=True))
+            # Only add if it meets the threshold
+            if sim >= sim_threshold:
+                if candidate_course not in res or sim > res[candidate_course]:
+                    res[candidate_course] = sim
+    
+    # Sort and limit results if top_k is provided
+    sorted_res = dict(sorted(res.items(), key=lambda item: item[1], reverse=True))
+    if top_k is not None:
+        sorted_res = dict(list(sorted_res.items())[:top_k])
+    
+    return sorted_res
 
 def create_user_profile(user_id):
     """Create user profile vector from enrolled courses"""
@@ -809,6 +817,7 @@ def predict(model_name, user_ids, params):
     scores = []
     print(f"🔔 Predict function called for {model_name} at {time.strftime('%H:%M:%S')}")
     for user_id in user_ids:
+        
         if model_name == models[0]:
             top_courses_param = params.get('top_courses', 10)  # Get the top_courses parameter
             ratings_df = load_ratings()
