@@ -189,8 +189,16 @@ def init__recommender_app():
     return results
 
 # ------ UI ------
+st.markdown("""
+<style>
+    .sidebar .stSelectbox label {
+        color: white !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Sidebar
-st.sidebar.markdown("### Personalized Learning Recommender")
+st.sidebar.markdown("### Control Panel")
 # Initialize the app
 selected_courses_df = init__recommender_app()
 
