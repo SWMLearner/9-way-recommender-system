@@ -817,26 +817,27 @@ def predict(model_name, user_ids, params):
     scores = []
     print(f"🔔 Predict function called for {model_name} at {time.strftime('%H:%M:%S')}")
     for user_id in user_ids:
-        
         if model_name == models[0]:
-            top_courses_param = params.get('top_courses', 10)  # Get the top_courses parameter
+            top_courses_param = params.get('top_courses', 10)  # Get top_courses parameter
             ratings_df = load_ratings()
             user_ratings = ratings_df[ratings_df['user'] == user_id]
             enrolled_course_ids = user_ratings['item'].to_list()
-            res = course_similarity_recommendations(idx_id_dict, id_idx_dict, enrolled_course_ids, sim_matrix)
     
-
-            count = 0
+    # Use the enhanced function with both threshold and top_k
+            res = course_similarity_recommendations(
+                   idx_id_dict, 
+                   id_idx_dict, 
+                  enrolled_course_ids, 
+                  sim_matrix, 
+                 sim_threshold=sim_threshold,  # Pass the threshold
+                top_k=top_courses_param       # Pass the top courses limit
+               )
+    
             for course_id, score in res.items():
-                if score >= sim_threshold and count < top_courses_param:
-                    users.append(user_id)
-                    courses.append(course_id)
-                    titles.append(title_map.get(course_id, "Unknown Course"))
-                    scores.append(score)
-                    count += 1
-                if count >= top_courses_param:
-                       break  # Stop once we have enough courses
-            
+                users.append(user_id)
+                courses.append(course_id)
+                titles.append(title_map.get(course_id, "Unknown Course"))
+                scores.append(score)            
     
         elif model_name == models[1]:
             res = user_profile_recommendations(user_id, sim_threshold)
