@@ -377,7 +377,23 @@ elif model_selection == backend.models[3]:
             ax.scatter(X_pca[:,0], X_pca[:,1], c=labels, cmap="tab10", alpha=0.6)
             ax.set_xlabel("PC1"); ax.set_ylabel("PC2")
             ax.set_title("PCA + KMeans Clusters")
-            st.pyplot(fig)
+            st.pyplot(fig) # After the cluster analysis, add personalized recs for current user
+        if st.session_state.get('test_user_id'):
+           user_id = st.session_state.test_user_id
+    # Get personalized recommendations for this user
+           user_cluster = cluster_df[cluster_df['user'] == user_id]['cluster'].iloc[0]
+           user_recs = recs.get(user_id, [])
+    
+           st.subheader("📚 Your Personalized Recommendations")
+           for i, course_id in enumerate(user_recs[:10]):
+              # Top 10
+              title = get_title_map().get(course_id, "Unknown Course")
+              st.write(f"{i+1}. {title}")
+      
+           
+         
+
+
 elif model_selection == backend.models[4]:
     # Button to request KNN execution
     if st.sidebar.button("▶️ Recommend with Item-KNN", key="run_knn_btn"):
