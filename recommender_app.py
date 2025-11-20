@@ -260,9 +260,10 @@ elif model_selection == backend.models[2]:
 
 # Clustering with PCA
 elif model_selection == backend.models[3]:
+    st.sidebar.subheader("PCA + KMeans Parameters")
     n_components = st.sidebar.slider("PCA Components", min_value=1, max_value=len(FEATURE_NAMES), value=5, step=1)
     n_clusters = st.sidebar.slider("KMeans Clusters", min_value=2, max_value=20, value=9, step=1)
-    pop_threshold = st.sidebar.slider("Min Enrollments for Popularity", min_value=1, max_value=50, value=10, step=1)
+    pop_threshold = st.sidebar.slider("Min Enrollments for Popularity", min_value=10, max_value=100, value=30, step=5)
     params = {"n_components": n_components, "n_clusters": n_clusters, "pop_threshold": pop_threshold}
 
 # KNN model
@@ -347,11 +348,8 @@ elif model_selection == backend.models[2]:
                 st.subheader("📚 Clustering Recommendations")
                 st.dataframe(df)
 elif model_selection == backend.models[3]:
-    st.sidebar.subheader("PCA + KMeans Parameters")
-    n_components = st.sidebar.slider("PCA Components", min_value=1, max_value=len(FEATURE_NAMES), value=5, step=1)
-    n_clusters = st.sidebar.slider("KMeans Clusters", min_value=2, max_value=20, value=9, step=1)
-    pop_threshold = st.sidebar.slider("Min Enrollments for Popularity", min_value=10, max_value=100, value=30, step=5)
-    params = {"n_components": n_components, "n_clusters": n_clusters, "pop_threshold": pop_threshold}
+  
+   
 
     if st.sidebar.button("▶️ Train & Recommend (PCA)", key="train_pca"):
         with st.spinner("Training PCA + KMeans model..."):
