@@ -810,10 +810,12 @@ def predict(model_name, user_ids, params):
     print(f"🔔 Predict function called for {model_name} at {time.strftime('%H:%M:%S')}")
     for user_id in user_ids:
         if model_name == models[0]:
+            top_courses_param = params.get('top_courses', 10)
             ratings_df = load_ratings()
             user_ratings = ratings_df[ratings_df['user'] == user_id]
             enrolled_course_ids = user_ratings['item'].to_list()
             res = course_similarity_recommendations(idx_id_dict, id_idx_dict, enrolled_course_ids, sim_matrix)
+            
             for course_id, score in res.items():
                 if score >= sim_threshold:
                     users.append(user_id)
