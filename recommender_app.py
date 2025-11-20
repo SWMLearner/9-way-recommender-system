@@ -19,6 +19,7 @@ st.set_page_config(
 )
 
 # Custom styling
+# Custom styling
 st.markdown("""
 <style>
 h1 {
@@ -31,7 +32,7 @@ h1 {
     background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
     color: white;
     border-radius: 15px;
-    box-shadow: 0 6极 12px rgba(0,0,0,0.15);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
 }
 thead tr th {
     background-color: #2c3e50 !important;
@@ -59,9 +60,26 @@ div[data-testid="stProgress"] > div > div {
     border-radius: 8px;
     padding: 10px 24px;
 }
+
+/* Add these for sidebar widget labels */
+div[data-testid="stSidebar"] .stSelectbox label,
+div[data-testid="stSidebar"] .stSlider label {
+    color: white !important;
+    font-weight: 500;
+}
+
+/* Optional: Make the slider values and tooltips more visible */
+div[data-testid="stSidebar"] .stSlider [data-testid="stMarkdownContainer"] p {
+    color: white !important;
+}
+
+/* Style the slider track and thumb */
+div[data-testid="stSidebar"] .stSlider [data-testid="stThumbValue"] {
+    color: #182848 !important;
+    font-weight: bold;
+}
 </style>
 """, unsafe_allow_html=True)
-
 # Add visible title to the main content area
 st.title("🎓 Course Recommender System")
 st.markdown("Discover personalized course recommendations based on your learning history")
