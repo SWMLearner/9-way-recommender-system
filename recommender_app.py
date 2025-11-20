@@ -348,14 +348,6 @@ elif model_selection == backend.models[2]:
                 st.dataframe(df)
 elif model_selection == backend.models[3]:
     if st.sidebar.button("▶️ Train & Recommend (PCA)", key="train_pca"):
-        # Load the course BOW data for feature extraction
-        try:
-            course_bow_df = load_bow()
-            st.write("Course BOW DataFrame columns:", course_bow_df.columns.tolist())  # Debug: show columns
-        except Exception as e:
-            st.error(f"Could not load course features data: {e}")
-            course_bow_df = None
-        
         pipe = Pipeline([
             ("scaler", StandardScaler()),
             ("pca", PCA(n_components=params["n_components"])),
@@ -367,90 +359,75 @@ elif model_selection == backend.models[3]:
         test_labeled = TEST_USERS_DF.merge(cluster_df, on="user")
         enrolls = test_labeled.assign(count=1).groupby(["cluster","item"])["count"].sum().reset_index()
         popular = enrolls[enrolls["count"] >= params["pop_threshold"]].groupby("cluster")["item"].apply(set).to_dict()
-        recs = {}
-        for uid, grp in test_labeled.groupby("user"):
-            cluster_id = grp["cluster"].iloc[0]
-            taken = set(grp["item"])
-            pool = popular.get(cluster_id, set())
-            recs[uid] = list(pool - taken)
+        
         summary = pd.DataFrame([
-            {"user": uid, "cluster": grp["cluster"].iloc[0], "n_recs": len(recs[uid])}
+            {"user": uid, "cluster": grp["cluster"].iloc[0], "n_recs": len(popular.get(grp["cluster"].iloc[0], []))}
             for uid, grp in test_labeled.groupby("user")
         ])
+        
         st.write("## PCA + KMeans Recommendation Summary")
         st.dataframe(summary)
         
-        # Generate personalized recommendations for current test user if exists
-        if st.session_state.get('test_user_id') and course_bow_df is not None:
-            user_id = st.session_state.test_user_id
-            try:
-                # Get the test user's courses
-                test_user_courses = st.session_state.user_courses
-                
-                # Check the structure of course_bow_df and find the correct ID column
-                id_column = None
-                possible_id_columns = ['COURSE_ID', 'course_id', 'item', 'ITEM', 'id', 'ID']
-                for col in possible_id_columns:
-                    if col in course_bow_df.columns:
-                        id_column = col
-                        break
-                
-                if not id_column:
-                    st.warning("Could not find course ID column in course features. Available columns: " + ", ".join(course_bow_df.columns.tolist()))
-                else:
-                    # Create a simple user profile for the test user based on their selected courses
-                    course_features = []
-                    valid_courses = []
-                    
-                    for course_id in test_user_courses:
-                        # Find the course in the course_bow_df using the identified ID column
-                        course_feat = course_bow_df[course_bow_df[id_column] == course_id][FEATURE_NAMES]
-                        if not course_feat.empty:
-                            course_features.append(course_feat.values[0])
-                            valid_courses.append(course_id)
-                    
-                    if course_features:
-                        # Average the course features to create a user profile
-                        import numpy as np
-                        test_user_profile = np.mean(course_features, axis=0).reshape(1, -1)
-                        
-                        # Transform using the trained pipeline and predict cluster
-                        test_user_scaled = pipe.named_steps["scaler"].transform(test_user_profile)
-                        test_user_pca = pipe.named_steps["pca"].transform(test_user_scaled)
-                        test_user_cluster = pipe.named_steps["km"].predict(test_user_pca)[0]
-                        
-                        # Get recommendations for this cluster
-                        user_recs = popular.get(test_user_cluster, [])
-                        
-                        # Filter out courses the user has already taken
-                        user_recs = [course for course in user_recs if course not in test_user_courses]
-                        
-                        st.subheader("📚 Your Personalized Recommendations")
-                        if user_recs:
-                            # Get course titles
-                            title_map = backend.get_title_map()
-                            for i, course_id in enumerate(user_recs[:10]):  # Top 10
-                                title = title_map.get(course_id, "Unknown Course")
-                                st.write(f"{i+1}. {title} - ({course_id})")
-                        else:
-                            st.info("No new recommendations found. Try selecting different courses or adjusting the popularity threshold.")
-                    else:
-                        st.warning(f"Could not generate recommendations - none of your selected courses were found in the feature database. Valid courses found: {valid_courses}")
-                        
-            except Exception as e:
-                st.error(f"Error generating personalized recommendations: {str(e)}")
-                st.info("This might happen if your selected courses don't match the feature database.")
-        elif st.session_state.get('test_user_id') and course_bow_df is None:
-            st.warning("Cannot generate personalized recommendations: course features not available.")
+        # Show cluster statistics
+        st.subheader("📊 Cluster Statistics")
+        cluster_stats = cluster_df['cluster'].value_counts().sort_index()
+        st.write(f"**Users per cluster:**")
+        for cluster_id, count in cluster_stats.items():
+            st.write(f"Cluster {cluster_id}: {count} users")
         
+        # Show popular courses in each cluster
+        st.subheader("🎯 Popular Courses by Cluster")
+        for cluster_id in sorted(popular.keys()):
+            courses = list(popular[cluster_id])[:5]  # Top 5 courses per cluster
+            if courses:
+                title_map = backend.get_title_map()
+                course_titles = [title_map.get(course, "Unknown Course") for course in courses]
+                st.write(f"**Cluster {cluster_id}:** {', '.join(course_titles)}")
+        
+        # Simple message for test user instead of complex personalized recommendations
+        if st.session_state.get('test_user_id'):
+            st.info("""
+            **🔍 PCA + KMeans Cluster Analysis**
+            
+            This model groups users into clusters based on their course preferences and shows popular courses within each cluster.
+            
+            **How it works:**
+            - Users are grouped into clusters based on their course enrollment patterns
+            - Each cluster represents users with similar learning interests
+            - Popular courses are identified within each cluster
+            
+            **For personalized recommendations**, try these models instead:
+            - **User Profile**: Finds similar users based on course preferences
+            - **KNN**: Item-based collaborative filtering
+            - **Neural Network**: Deep learning-based recommendations
+            """)
+        
+        # Visualization
         if params["n_components"] >= 2:
             X_pca = pipe.named_steps["pca"].transform(pipe.named_steps["scaler"].transform(X))
-            fig, ax = plt.subplots()
-            ax.scatter(X_pca[:,0], X_pca[:,1], c=labels, cmap="tab10", alpha=0.6)
-            ax.set_xlabel("PC1"); ax.set_ylabel("PC2")
-            ax.set_title("PCA + KMeans Clusters")
+            fig, ax = plt.subplots(figsize=(10, 6))
+            scatter = ax.scatter(X_pca[:,0], X_pca[:,1], c=labels, cmap="tab10", alpha=0.6, s=50)
+            ax.set_xlabel("Principal Component 1")
+            ax.set_ylabel("Principal Component 2")
+            ax.set_title("PCA + KMeans Clusters (User Segmentation)")
+            
+            # Add legend for clusters
+            legend_elements = [plt.Line2D([0], [0], marker='o', color='w', 
+                                        markerfacecolor=plt.cm.tab10(i/len(cluster_stats)), 
+                                        markersize=8, label=f'Cluster {i}') 
+                             for i in range(len(cluster_stats))]
+            ax.legend(handles=legend_elements, title='Clusters')
+            
             st.pyplot(fig)
-
+            
+            # Explain what the visualization shows
+            st.caption("""
+            **Understanding the PCA Plot:**
+            - Each point represents a user
+            - Colors represent different clusters of users with similar preferences
+            - Principal Components 1 and 2 capture the most important patterns in user behavior
+            - Users closer together have more similar course preferences
+            """)
 elif model_selection == backend.models[4]:
     # Button to request KNN execution
     if st.sidebar.button("▶️ Recommend with Item-KNN", key="run_knn_btn"):
