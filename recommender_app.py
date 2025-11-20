@@ -371,26 +371,64 @@ elif model_selection == backend.models[3]:
         ])
         st.write("## PCA + KMeans Recommendation Summary")
         st.dataframe(summary)
+        
+        # Generate personalized recommendations for current test user if exists
+        if st.session_state.get('test_user_id'):
+            user_id = st.session_state.test_user_id
+            try:
+                # Get the test user's courses
+                test_user_courses = st.session_state.user_courses
+                
+                # Create a simple user profile for the test user based on their selected courses
+                # For PCA+KMeans, we need to assign the test user to a cluster
+                # Since the test user is new, we'll find the closest cluster based on course features
+                
+                # Get course features for test user's courses
+                course_features = []
+                for course_id in test_user_courses:
+                    # Find the course in the course_bow_df (you might need to load this)
+                    course_feat = course_bow_df[course_bow_df['COURSE_ID'] == course_id][FEATURE_NAMES]
+                    if not course_feat.empty:
+                        course_features.append(course_feat.values[0])
+                
+                if course_features:
+                    # Average the course features to create a user profile
+                    test_user_profile = np.mean(course_features, axis=0).reshape(1, -1)
+                    
+                    # Transform using the trained pipeline and predict cluster
+                    test_user_scaled = pipe.named_steps["scaler"].transform(test_user_profile)
+                    test_user_pca = pipe.named_steps["pca"].transform(test_user_scaled)
+                    test_user_cluster = pipe.named_steps["km"].predict(test_user_pca)[0]
+                    
+                    # Get recommendations for this cluster
+                    user_recs = popular.get(test_user_cluster, [])
+                    
+                    # Filter out courses the user has already taken
+                    user_recs = [course for course in user_recs if course not in test_user_courses]
+                    
+                    st.subheader("📚 Your Personalized Recommendations")
+                    if user_recs:
+                        # Get course titles
+                        title_map = backend.get_title_map()
+                        for i, course_id in enumerate(user_recs[:10]):  # Top 10
+                            title = title_map.get(course_id, "Unknown Course")
+                            st.write(f"{i+1}. {title} - ({course_id})")
+                    else:
+                        st.info("No new recommendations found. Try selecting different courses or adjusting the popularity threshold.")
+                else:
+                    st.warning("Could not generate recommendations - selected courses not found in feature database.")
+                    
+            except Exception as e:
+                st.error(f"Error generating personalized recommendations: {str(e)}")
+                st.info("This might happen if your selected courses don't match the feature database.")
+        
         if params["n_components"] >= 2:
             X_pca = pipe.named_steps["pca"].transform(pipe.named_steps["scaler"].transform(X))
             fig, ax = plt.subplots()
             ax.scatter(X_pca[:,0], X_pca[:,1], c=labels, cmap="tab10", alpha=0.6)
             ax.set_xlabel("PC1"); ax.set_ylabel("PC2")
             ax.set_title("PCA + KMeans Clusters")
-            st.pyplot(fig) # After the cluster analysis, add personalized recs for current user
-        if st.session_state.get('test_user_id'):
-           user_id = st.session_state.test_user_id
-    # Get personalized recommendations for this user
-           user_cluster = cluster_df[cluster_df['user'] == user_id]['cluster'].iloc[0]
-           user_recs = recs.get(user_id, [])
-    
-           st.subheader("📚 Your Personalized Recommendations")
-           for i, course_id in enumerate(user_recs[:10]):
-              # Top 10
-              title = get_title_map().get(course_id, "Unknown Course")
-              st.write(f"{i+1}. {title}")
-      
-           
+            st.pyplot(fig)           
          
 
 
