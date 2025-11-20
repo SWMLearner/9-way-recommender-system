@@ -565,7 +565,7 @@ elif model_selection == backend.models[4]:
                 #st.subheader("📚 NMF Recommendations")
                 #st.dataframe(df)
 
-elif model_selection == backend.models[6]:
+elif model_selection == backend.models[5]:
     if st.sidebar.button("▶️ Train & Recommend (Neural Network)", key="run_nn_btn"):
         if not st.session_state.get('test_user_id'):
             st.warning("Please create a test user first!")
@@ -579,7 +579,7 @@ elif model_selection == backend.models[6]:
                 with st.spinner("Training neural network (this may take a few minutes)..."):
                     # Train model and generate recommendations
                     df = backend.predict(
-                        model_name=backend.models[6],
+                        model_name=backend.models[5],
                         user_ids=[user_id],
                         params={
                             "embedding_size": params["embedding_size"],
@@ -597,7 +597,7 @@ elif model_selection == backend.models[6]:
                 st.markdown("1. Select at least 3 courses before creating test user")
                 st.markdown("2. Click 'Add Ratings for New User' before training")
                 st.markdown("3. Try with fewer training epochs (5-10)")
-elif model_selection == backend.models[7]:  # Regression with Embeddings
+elif model_selection == backend.models[6]:  # Regression with Embeddings
     if st.sidebar.button("▶️ Recommend (Regression Embeddings)", key="run_reg_emb"):
         if not st.session_state.get('test_user_id'):
             st.warning("Please create a test user first!")
@@ -605,7 +605,7 @@ elif model_selection == backend.models[7]:  # Regression with Embeddings
             user_id = st.session_state.test_user_id
             with st.spinner("Generating regression recommendations..."):
                 df = backend.predict(
-                    backend.models[7], 
+                    backend.models[6], 
                     [user_id], 
                     {"top_k": params["top_k"]}
                 )
@@ -614,7 +614,7 @@ elif model_selection == backend.models[7]:  # Regression with Embeddings
 
 
 # Classification with Embeddings prediction
-elif model_selection == backend.models[8]:  # Classification with Embeddings
+elif model_selection == backend.models[7]:  # Classification with Embeddings
     if st.sidebar.button("▶️ Recommend (Classification Embeddings)", key="run_cls_emb"):
         if not st.session_state.get('test_user_id'):
             st.warning("Please create a test user first!")
@@ -622,7 +622,7 @@ elif model_selection == backend.models[8]:  # Classification with Embeddings
             user_id = st.session_state.test_user_id
             with st.spinner("Generating classification recommendations..."):
                 df = backend.predict(
-                    backend.models[8], 
+                    backend.models[7], 
                     [user_id], 
                     {"top_k": params["top_k"]}
                 )
