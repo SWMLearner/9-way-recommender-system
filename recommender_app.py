@@ -351,8 +351,9 @@ elif model_selection == backend.models[3]:
         # Load the course BOW data for feature extraction
         try:
             course_bow_df = load_bow()
-        except:
-            st.error("Could not load course features data")
+            st.write("Course BOW DataFrame columns:", course_bow_df.columns.tolist())  # Debug: show columns
+        except Exception as e:
+            st.error(f"Could not load course features data: {e}")
             course_bow_df = None
         
         pipe = Pipeline([
@@ -386,42 +387,56 @@ elif model_selection == backend.models[3]:
                 # Get the test user's courses
                 test_user_courses = st.session_state.user_courses
                 
-                # Create a simple user profile for the test user based on their selected courses
-                course_features = []
-                for course_id in test_user_courses:
-                    # Find the course in the course_bow_df
-                    course_feat = course_bow_df[course_bow_df['COURSE_ID'] == course_id][FEATURE_NAMES]
-                    if not course_feat.empty:
-                        course_features.append(course_feat.values[0])
+                # Check the structure of course_bow_df and find the correct ID column
+                id_column = None
+                possible_id_columns = ['COURSE_ID', 'course_id', 'item', 'ITEM', 'id', 'ID']
+                for col in possible_id_columns:
+                    if col in course_bow_df.columns:
+                        id_column = col
+                        break
                 
-                if course_features:
-                    # Average the course features to create a user profile
-                    import numpy as np
-                    test_user_profile = np.mean(course_features, axis=0).reshape(1, -1)
-                    
-                    # Transform using the trained pipeline and predict cluster
-                    test_user_scaled = pipe.named_steps["scaler"].transform(test_user_profile)
-                    test_user_pca = pipe.named_steps["pca"].transform(test_user_scaled)
-                    test_user_cluster = pipe.named_steps["km"].predict(test_user_pca)[0]
-                    
-                    # Get recommendations for this cluster
-                    user_recs = popular.get(test_user_cluster, [])
-                    
-                    # Filter out courses the user has already taken
-                    user_recs = [course for course in user_recs if course not in test_user_courses]
-                    
-                    st.subheader("📚 Your Personalized Recommendations")
-                    if user_recs:
-                        # Get course titles
-                        title_map = backend.get_title_map()
-                        for i, course_id in enumerate(user_recs[:10]):  # Top 10
-                            title = title_map.get(course_id, "Unknown Course")
-                            st.write(f"{i+1}. {title} - ({course_id})")
-                    else:
-                        st.info("No new recommendations found. Try selecting different courses or adjusting the popularity threshold.")
+                if not id_column:
+                    st.warning("Could not find course ID column in course features. Available columns: " + ", ".join(course_bow_df.columns.tolist()))
                 else:
-                    st.warning("Could not generate recommendations - selected courses not found in feature database.")
+                    # Create a simple user profile for the test user based on their selected courses
+                    course_features = []
+                    valid_courses = []
                     
+                    for course_id in test_user_courses:
+                        # Find the course in the course_bow_df using the identified ID column
+                        course_feat = course_bow_df[course_bow_df[id_column] == course_id][FEATURE_NAMES]
+                        if not course_feat.empty:
+                            course_features.append(course_feat.values[0])
+                            valid_courses.append(course_id)
+                    
+                    if course_features:
+                        # Average the course features to create a user profile
+                        import numpy as np
+                        test_user_profile = np.mean(course_features, axis=0).reshape(1, -1)
+                        
+                        # Transform using the trained pipeline and predict cluster
+                        test_user_scaled = pipe.named_steps["scaler"].transform(test_user_profile)
+                        test_user_pca = pipe.named_steps["pca"].transform(test_user_scaled)
+                        test_user_cluster = pipe.named_steps["km"].predict(test_user_pca)[0]
+                        
+                        # Get recommendations for this cluster
+                        user_recs = popular.get(test_user_cluster, [])
+                        
+                        # Filter out courses the user has already taken
+                        user_recs = [course for course in user_recs if course not in test_user_courses]
+                        
+                        st.subheader("📚 Your Personalized Recommendations")
+                        if user_recs:
+                            # Get course titles
+                            title_map = backend.get_title_map()
+                            for i, course_id in enumerate(user_recs[:10]):  # Top 10
+                                title = title_map.get(course_id, "Unknown Course")
+                                st.write(f"{i+1}. {title} - ({course_id})")
+                        else:
+                            st.info("No new recommendations found. Try selecting different courses or adjusting the popularity threshold.")
+                    else:
+                        st.warning(f"Could not generate recommendations - none of your selected courses were found in the feature database. Valid courses found: {valid_courses}")
+                        
             except Exception as e:
                 st.error(f"Error generating personalized recommendations: {str(e)}")
                 st.info("This might happen if your selected courses don't match the feature database.")
@@ -435,7 +450,6 @@ elif model_selection == backend.models[3]:
             ax.set_xlabel("PC1"); ax.set_ylabel("PC2")
             ax.set_title("PCA + KMeans Clusters")
             st.pyplot(fig)
-
 
 elif model_selection == backend.models[4]:
     # Button to request KNN execution
