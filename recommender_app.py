@@ -80,6 +80,18 @@ div[data-testid="stSidebar"] .stSlider [data-testid="stThumbValue"] {
 }
 </style>
 """, unsafe_allow_html=True)
+# Additional sidebar styling for widget labels
+st.markdown("""
+<style>
+/* Target all widget labels in sidebar */
+[data-testid="stSidebar"] .stSelectbox label,
+[data-testid="stSidebar"] .stSlider label,
+[data-testid="stSidebar"] .stTextInput label,
+[data-testid="stSidebar"] .stNumberInput label {
+    color: white !important;
+}
+</style>
+""", unsafe_allow_html=True)
 # Add visible title to the main content area
 st.title("🎓 Course Recommender System")
 st.markdown("Discover personalized course recommendations based on your learning history")
