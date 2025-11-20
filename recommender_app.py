@@ -347,63 +347,132 @@ elif model_selection == backend.models[2]:
                 st.subheader("📚 Clustering Recommendations")
                 st.dataframe(df)
 elif model_selection == backend.models[3]:
+    st.sidebar.subheader("PCA + KMeans Parameters")
+    n_components = st.sidebar.slider("PCA Components", min_value=1, max_value=len(FEATURE_NAMES), value=5, step=1)
+    n_clusters = st.sidebar.slider("KMeans Clusters", min_value=2, max_value=20, value=9, step=1)
+    pop_threshold = st.sidebar.slider("Min Enrollments for Popularity", min_value=10, max_value=100, value=30, step=5)
+    params = {"n_components": n_components, "n_clusters": n_clusters, "pop_threshold": pop_threshold}
+
     if st.sidebar.button("▶️ Train & Recommend (PCA)", key="train_pca"):
-        pipe = Pipeline([
-            ("scaler", StandardScaler()),
-            ("pca", PCA(n_components=params["n_components"])),
-            ("km", KMeans(n_clusters=params["n_clusters"], random_state=123))
-        ])
-        X = USER_PROFILE_DF[FEATURE_NAMES].values
-        labels = pipe.fit_predict(X)
-        cluster_df = pd.DataFrame({"user": USER_PROFILE_DF["user"], "cluster": labels})
-        test_labeled = TEST_USERS_DF.merge(cluster_df, on="user")
-        enrolls = test_labeled.assign(count=1).groupby(["cluster","item"])["count"].sum().reset_index()
-        popular = enrolls[enrolls["count"] >= params["pop_threshold"]].groupby("cluster")["item"].apply(set).to_dict()
+        with st.spinner("Training PCA + KMeans model..."):
+            pipe = Pipeline([
+                ("scaler", StandardScaler()),
+                ("pca", PCA(n_components=params["n_components"])),
+                ("km", KMeans(n_clusters=params["n_clusters"], random_state=123))
+            ])
+            X = USER_PROFILE_DF[FEATURE_NAMES].values
+            labels = pipe.fit_predict(X)
+            cluster_df = pd.DataFrame({"user": USER_PROFILE_DF["user"], "cluster": labels})
+            test_labeled = TEST_USERS_DF.merge(cluster_df, on="user")
+            enrolls = test_labeled.assign(count=1).groupby(["cluster","item"])["count"].sum().reset_index()
+            popular = enrolls[enrolls["count"] >= params["pop_threshold"]].groupby("cluster")["item"].apply(set).to_dict()
+            
+            summary = pd.DataFrame([
+                {"user": uid, "cluster": grp["cluster"].iloc[0], "n_recs": len(popular.get(grp["cluster"].iloc[0], []))}
+                for uid, grp in test_labeled.groupby("user")
+            ])
+            
+        st.success("PCA + KMeans training completed!")
         
-        summary = pd.DataFrame([
-            {"user": uid, "cluster": grp["cluster"].iloc[0], "n_recs": len(popular.get(grp["cluster"].iloc[0], []))}
-            for uid, grp in test_labeled.groupby("user")
-        ])
-        
-        st.write("## PCA + KMeans Recommendation Summary")
-        st.dataframe(summary)
-        
-        # Show cluster statistics
+        # Cluster statistics
         st.subheader("📊 Cluster Statistics")
         cluster_stats = cluster_df['cluster'].value_counts().sort_index()
-        st.write(f"**Users per cluster:**")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Clusters", len(cluster_stats))
+        with col2:
+            st.metric("Total Users", cluster_stats.sum())
+        with col3:
+            st.metric("Avg Users/Cluster", f"{cluster_stats.mean():.1f}")
+        
+        # Show cluster sizes
+        st.write("**Users per cluster:**")
+        cluster_data = []
         for cluster_id, count in cluster_stats.items():
-            st.write(f"Cluster {cluster_id}: {count} users")
+            cluster_data.append({"Cluster": cluster_id, "Users": count})
+        cluster_size_df = pd.DataFrame(cluster_data)
+        st.dataframe(cluster_size_df, hide_index=True)
         
-        # Show popular courses in each cluster
-        st.subheader("🎯 Popular Courses by Cluster")
-        for cluster_id in sorted(popular.keys()):
-            courses = list(popular[cluster_id])[:5]  # Top 5 courses per cluster
-            if courses:
+        # Show distinctive courses in each cluster
+        st.subheader("🎯 Distinctive Courses by Cluster")
+        
+        # Calculate distinctive courses
+        cluster_course_counts = enrolls.groupby(['cluster', 'item'])['count'].sum().reset_index()
+        global_popularity = enrolls.groupby('item')['count'].sum()
+        
+        distinctive_results = []
+        
+        for cluster_id in sorted(cluster_df['cluster'].unique()):
+            # Get courses for this cluster
+            cluster_courses = cluster_course_counts[cluster_course_counts['cluster'] == cluster_id]
+            
+            # Calculate how distinctive each course is to this cluster
+            distinctive_courses = []
+            for _, row in cluster_courses.iterrows():
+                course_id = row['item']
+                cluster_count = row['count']
+                global_count = global_popularity.get(course_id, 0)
+                
+                # Calculate relative popularity in this cluster vs globally
+                if global_count > 0:
+                    relative_popularity = cluster_count / global_count
+                    distinctive_courses.append((course_id, cluster_count, relative_popularity))
+            
+            # Sort by distinctiveness and take top 5
+            distinctive_courses.sort(key=lambda x: x[2], reverse=True)
+            top_distinctive = distinctive_courses[:5]
+            
+            if top_distinctive:
                 title_map = backend.get_title_map()
-                course_titles = [title_map.get(course, "Unknown Course") for course in courses]
-                st.write(f"**Cluster {cluster_id}:** {', '.join(course_titles)}")
+                for course_id, count, rel_pop in top_distinctive:
+                    title = title_map.get(course_id, "Unknown Course")
+                    distinctive_results.append({
+                        "Cluster": cluster_id,
+                        "Course": title,
+                        "Enrollments": count,
+                        "Relative Popularity": f"{rel_pop:.2f}"
+                    })
         
-        # Simple message for test user instead of complex personalized recommendations
+        if distinctive_results:
+            distinctive_df = pd.DataFrame(distinctive_results)
+            
+            # Display in a more readable format
+            for cluster_id in sorted(distinctive_df['Cluster'].unique()):
+                cluster_courses = distinctive_df[distinctive_df['Cluster'] == cluster_id]
+                st.write(f"**Cluster {cluster_id}** ({cluster_stats.get(cluster_id, 0)} users):")
+                
+                course_list = []
+                for _, row in cluster_courses.iterrows():
+                    course_list.append(f"{row['Course']} (rel: {row['Relative Popularity']})")
+                
+                st.write(" • " + " • ".join(course_list))
+                st.write("")  # Add some spacing
+        else:
+            st.info("No distinctive courses found. Try adjusting the popularity threshold.")
+        
+        # Model summary
+        st.subheader("📈 Model Summary")
+        st.write("""
+        **PCA + KMeans Analysis** groups users into clusters based on their course enrollment patterns. 
+        The 'Distinctive Courses' show which courses are over-represented in each cluster compared to the overall population.
+        
+        - **Relative Popularity**: How much more popular a course is in this cluster vs the entire dataset
+        - **Higher values** indicate courses that are more characteristic of the cluster
+        """)
+        
+        # Simple message for test user
         if st.session_state.get('test_user_id'):
             st.info("""
-            **🔍 PCA + KMeans Cluster Analysis**
-            
-            This model groups users into clusters based on their course preferences and shows popular courses within each cluster.
-            
-            **How it works:**
-            - Users are grouped into clusters based on their course enrollment patterns
-            - Each cluster represents users with similar learning interests
-            - Popular courses are identified within each cluster
-            
-            **For personalized recommendations**, try these models instead:
-            - **User Profile**: Finds similar users based on course preferences
-            - **KNN**: Item-based collaborative filtering
-            - **Neural Network**: Deep learning-based recommendations
+            **💡 For Personalized Recommendations:** 
+            While PCA+KMeans shows user segments, for individual course recommendations try:
+            - **User Profile Model**: Finds users similar to you
+            - **KNN Model**: Item-based collaborative filtering  
+            - **Neural Network**: Deep learning recommendations
             """)
         
         # Visualization
         if params["n_components"] >= 2:
+            st.subheader("🔍 Cluster Visualization")
             X_pca = pipe.named_steps["pca"].transform(pipe.named_steps["scaler"].transform(X))
             fig, ax = plt.subplots(figsize=(10, 6))
             scatter = ax.scatter(X_pca[:,0], X_pca[:,1], c=labels, cmap="tab10", alpha=0.6, s=50)
@@ -416,19 +485,35 @@ elif model_selection == backend.models[3]:
                                         markerfacecolor=plt.cm.tab10(i/len(cluster_stats)), 
                                         markersize=8, label=f'Cluster {i}') 
                              for i in range(len(cluster_stats))]
-            ax.legend(handles=legend_elements, title='Clusters')
+            ax.legend(handles=legend_elements, title='Clusters', bbox_to_anchor=(1.05, 1), loc='upper left')
             
+            plt.tight_layout()
             st.pyplot(fig)
             
             # Explain what the visualization shows
-            st.caption("""
-            **Understanding the PCA Plot:**
-            - Each point represents a user
-            - Colors represent different clusters of users with similar preferences
-            - Principal Components 1 and 2 capture the most important patterns in user behavior
-            - Users closer together have more similar course preferences
-            """)
-elif model_selection == backend.models[4]:
+            with st.expander("ℹ️ Understanding the PCA Plot"):
+                st.write("""
+                - **Each point** represents a user in the dataset
+                - **Colors** represent different clusters of users with similar preferences
+                - **Principal Components 1 and 2** capture the most important patterns in user behavior
+                - **Users closer together** have more similar course enrollment patterns
+                - **Well-separated clusters** indicate distinct user segments with different preferences
+                """)
+        
+        # Show some technical details
+        with st.expander("🔧 Technical Details"):
+            st.write(f"**PCA Components:** {params['n_components']}")
+            st.write(f"**KMeans Clusters:** {params['n_clusters']}")
+            st.write(f"**Popularity Threshold:** {params['pop_threshold']} enrollments")
+            st.write(f"**Features Used:** {len(FEATURE_NAMES)} features")
+            
+            # Show explained variance for PCA
+            if params["n_components"] >= 2:
+                explained_variance = pipe.named_steps["pca"].explained_variance_ratio_
+                st.write(f"**PCA Explained Variance:**")
+                for i, variance in enumerate(explained_variance):
+                    st.write(f"  - PC{i+1}: {variance:.1%}")
+                st.write(f"**Total Variance Explained:** {sum(explained_variance):.1%}")elif model_selection == backend.models[4]:
     # Button to request KNN execution
     if st.sidebar.button("▶️ Recommend with Item-KNN", key="run_knn_btn"):
         st.session_state.knn_state['run_requested'] = True
