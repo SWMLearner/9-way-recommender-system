@@ -67,6 +67,16 @@ st.title("🎓 Course Recommender System")
 st.markdown("Discover personalized course recommendations based on your learning history")
 st.markdown("""---""")
 
+# Demo steps
+st.markdown("""
+### 🚀 Quick Start Guide:
+1. **Select Courses**: Choose courses you've completed from the table below
+2. **Create User**: Click "Add Ratings for New User" to create your profile  
+3. **Choose Algorithm**: Select from 8 ML models in the sidebar
+4. **Get Recommendations**: Click the recommendation button for your model
+5. **Compare Results**: Try different algorithms to see varied suggestions
+""")
+
 # ------- Functions ------
 @st.cache_data
 def load_course_sims():
@@ -180,7 +190,7 @@ def init__recommender_app():
 
 # ------ UI ------
 # Sidebar
-st.sidebar.title('Personalized Learning Recommender')
+st.sidebar.markdown("### Personalized Learning Recommender")
 # Initialize the app
 selected_courses_df = init__recommender_app()
 
@@ -232,24 +242,19 @@ elif model_selection == backend.models[4]:
     #params = {"n_factors": n_factors, "n_epochs": n_epochs, "top_k": top_k}
 
 # Neural Network model
-elif model_selection == backend.models[6]:
+elif model_selection == backend.models[5]:
     st.sidebar.subheader("Neural Network Parameters")
     embedding_size = st.sidebar.slider("Embedding Size", 8, 64, 16, step=8)
     epochs = st.sidebar.slider("Training Epochs", 5, 50, 10, step=5)
     top_k = st.sidebar.slider("Top-K Recommendations", 1, 20, 5, step=1)
     params = {"embedding_size": embedding_size, "epochs": epochs, "top_k": top_k}
 
-elif model_selection == backend.models[7]:  # Regression with Embeddings
+elif model_selection == backend.models[6]:  # Regression with Embeddings
     top_k = st.sidebar.slider("Top-K Recommendations", 1, 20, 5, step=1)
     params = {"top_k": top_k}
 
 
-elif model_selection == backend.models[8]:  # Classification with Embeddings
-    top_k = st.sidebar.slider("Top-K Recommendations", 1, 20, 5, step=1)
-    params = {"top_k": top_k}
-
-# Classification with Embeddings model
-elif model_selection == backend.models[8]:  # Classification with Embeddings
+elif model_selection == backend.models[7]:  # Classification with Embeddings
     top_k = st.sidebar.slider("Top-K Recommendations", 1, 20, 5, step=1)
     params = {"top_k": top_k}
 
