@@ -816,17 +816,16 @@ def predict(model_name, user_ids, params):
             enrolled_course_ids = user_ratings['item'].to_list()
             res = course_similarity_recommendations(idx_id_dict, id_idx_dict, enrolled_course_ids, sim_matrix)
     
-     # Add counter to track how many courses we've added
+
             count = 0
             for course_id, score in res.items():
-                
                 if score >= sim_threshold and count < top_courses_param:
                     users.append(user_id)
                     courses.append(course_id)
                     titles.append(title_map.get(course_id, "Unknown Course"))
                     scores.append(score)
                     count += 1
-                   if count >= top_courses_param:
+                if count >= top_courses_param:
                        break  # Stop once we have enough courses
             
     
