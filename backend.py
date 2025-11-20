@@ -869,15 +869,21 @@ def predict(model_name, user_ids, params):
                 scores.append(score)            
     
         elif model_name == models[1]:
-            sim_threshold = params.get("sim_threshold", 50) / 100.0
-            top_courses = params.get("top_courses", 10)
+    # User Profile specific parameters
+            user_profile_threshold = params.get("sim_threshold", 50) / 100.0
+            top_courses_param = params.get("top_courses", 10)
     
-            res = user_profile_recommendations(user_id, sim_threshold, top_courses)
-            for course_id, score in res.items():
-                users.append(user_id)
-                courses.append(course_id)
-                titles.append(title_map.get(course_id, "Unknown Course"))
-                scores.append(score)
+            print(f"🔍 DEBUG PREDICT: Calling user_profile_recommendations with threshold={user_profile_threshold}, top_courses={top_courses_param}")
+    
+            res = user_profile_recommendations(user_id, user_profile_threshold, top_courses_param)
+    
+            print(f"🔍 DEBUG PREDICT: user_profile_recommendations returned {len(res)} items")
+    
+    for course_id, score in res.items():
+        users.append(user_id)
+        courses.append(course_id)
+        titles.append(title_map.get(course_id, "Unknown Course"))
+        scores.append(score)
         elif model_name == models[2]:
             if CLUSTER_MODEL is None or CLUSTER_MODEL.n_clusters != params["cluster_num"]:
                 train_clustering(params["cluster_num"])
