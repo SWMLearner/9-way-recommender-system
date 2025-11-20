@@ -454,7 +454,10 @@ def user_profile_recommendations(user_id, sim_threshold, top_courses=None):
     
     # Sort by similarity score (descending) and limit to top_courses
     sorted_recommendations = dict(sorted(recommendations.items(), key=lambda item: item[1], reverse=True))
-    
+    print(f"User profile norm: {np.linalg.norm(user_profile)}")
+    print(f"Sample candidate vector: {candidate_vec_normalized[:5]}")  # First 5 elements
+    print(f"Similarity scores sample: {list(recommendations.values())[:5]}")
+
     if top_courses is not None:
         sorted_recommendations = dict(list(sorted_recommendations.items())[:top_courses])
     
