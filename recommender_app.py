@@ -348,6 +348,13 @@ elif model_selection == backend.models[2]:
                 st.dataframe(df)
 elif model_selection == backend.models[3]:
     if st.sidebar.button("▶️ Train & Recommend (PCA)", key="train_pca"):
+        # Load the course BOW data for feature extraction
+        try:
+            course_bow_df = load_bow()
+        except:
+            st.error("Could not load course features data")
+            course_bow_df = None
+        
         pipe = Pipeline([
             ("scaler", StandardScaler()),
             ("pca", PCA(n_components=params["n_components"])),
@@ -373,26 +380,23 @@ elif model_selection == backend.models[3]:
         st.dataframe(summary)
         
         # Generate personalized recommendations for current test user if exists
-        if st.session_state.get('test_user_id'):
+        if st.session_state.get('test_user_id') and course_bow_df is not None:
             user_id = st.session_state.test_user_id
             try:
                 # Get the test user's courses
                 test_user_courses = st.session_state.user_courses
                 
                 # Create a simple user profile for the test user based on their selected courses
-                # For PCA+KMeans, we need to assign the test user to a cluster
-                # Since the test user is new, we'll find the closest cluster based on course features
-                
-                # Get course features for test user's courses
                 course_features = []
                 for course_id in test_user_courses:
-                    # Find the course in the course_bow_df (you might need to load this)
+                    # Find the course in the course_bow_df
                     course_feat = course_bow_df[course_bow_df['COURSE_ID'] == course_id][FEATURE_NAMES]
                     if not course_feat.empty:
                         course_features.append(course_feat.values[0])
                 
                 if course_features:
                     # Average the course features to create a user profile
+                    import numpy as np
                     test_user_profile = np.mean(course_features, axis=0).reshape(1, -1)
                     
                     # Transform using the trained pipeline and predict cluster
@@ -421,6 +425,8 @@ elif model_selection == backend.models[3]:
             except Exception as e:
                 st.error(f"Error generating personalized recommendations: {str(e)}")
                 st.info("This might happen if your selected courses don't match the feature database.")
+        elif st.session_state.get('test_user_id') and course_bow_df is None:
+            st.warning("Cannot generate personalized recommendations: course features not available.")
         
         if params["n_components"] >= 2:
             X_pca = pipe.named_steps["pca"].transform(pipe.named_steps["scaler"].transform(X))
@@ -428,8 +434,7 @@ elif model_selection == backend.models[3]:
             ax.scatter(X_pca[:,0], X_pca[:,1], c=labels, cmap="tab10", alpha=0.6)
             ax.set_xlabel("PC1"); ax.set_ylabel("PC2")
             ax.set_title("PCA + KMeans Clusters")
-            st.pyplot(fig)           
-         
+            st.pyplot(fig)
 
 
 elif model_selection == backend.models[4]:
