@@ -810,18 +810,26 @@ def predict(model_name, user_ids, params):
     print(f"🔔 Predict function called for {model_name} at {time.strftime('%H:%M:%S')}")
     for user_id in user_ids:
         if model_name == models[0]:
-            top_courses_param = params.get('top_courses', 10)
+            top_courses_param = params.get('top_courses', 10)  # Get the top_courses parameter
             ratings_df = load_ratings()
             user_ratings = ratings_df[ratings_df['user'] == user_id]
             enrolled_course_ids = user_ratings['item'].to_list()
             res = course_similarity_recommendations(idx_id_dict, id_idx_dict, enrolled_course_ids, sim_matrix)
-            
+    
+     # Add counter to track how many courses we've added
+            count = 0
             for course_id, score in res.items():
-                if score >= sim_threshold:
+                
+                if score >= sim_threshold and count < top_courses_param:
                     users.append(user_id)
                     courses.append(course_id)
                     titles.append(title_map.get(course_id, "Unknown Course"))
                     scores.append(score)
+                    count += 1
+                   if count >= top_courses_param:
+                       break  # Stop once we have enough courses
+            
+    
         elif model_name == models[1]:
             res = user_profile_recommendations(user_id, sim_threshold)
             for course_id, score in res.items():
