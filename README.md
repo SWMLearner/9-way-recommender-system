@@ -24,5 +24,7 @@ A machine learning course recommendation system originally implementing 9 differ
 pip install -r requirements.txt
 streamlit run recommender_app.py
 
-## Live Demo
-[Add your Streamlit Cloud URL here after deployment]
+## 🌍 Live Demos
+- **International/Streamlit Cloud**: https://9-way-recommender-system.streamlit.app/
+- **China/ModelScope**: https://modelscope.ai/studios/SargamWadhwa/course-recommender-system
+- **Local Run**: `streamlit run recommender_app.py`
