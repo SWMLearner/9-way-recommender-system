@@ -330,7 +330,8 @@ elif model_selection == backend.models[1]:
             st.warning("Select at least one course first.")
         else:
             user_id = backend.add_new_ratings(ids)
-            threshold = params.get("sim_threshold", 50) / 100.0
+            threshold = params.get("sim_threshold", 10)   # use raw score threshold directly
+
             top_k = params.get("top_courses", 10)
             df = backend.predict("User Profile", [user_id], {"sim_threshold": threshold, "top_courses": top_k})
 
