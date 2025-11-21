@@ -355,18 +355,25 @@ elif model_selection == backend.models[2]:
     if st.sidebar.button("🔎 Test Clustering"):
         ids = selected_courses_df["COURSE_ID"].tolist()
         if not ids:
-            st.warning("Select at least one course.")
+            st.warning("Select at least one course first.")
         else:
             user_id = backend.add_new_ratings(ids)
-            df = backend.predict(backend.models[2], [user_id], {
-                "cluster_num": params["cluster_num"],
-                "top_courses": params["top_courses"]
-            })
+            df = backend.predict("Clustering", [user_id], params)
             if df.empty:
-                st.error("No clustering recs—try different params.")
+                st.error("No recommendations found.")
             else:
-                st.subheader("📚 Clustering Recommendations")
-                st.dataframe(df)
+                st.subheader("📊 Clustering Recommendations")
+                df = df.rename(columns={
+                    "Cluster ID": "Cluster",
+                    "Popularity": "Enrollments",
+                    "Distance to Centroid": "Centroid Distance"
+                })
+                st.dataframe(df.style.format({
+                    "Enrollments": "{:.0f}",
+                    "Centroid Distance": "{:.3f}"
+                }))
+                st.caption("ℹ️ Courses are ranked by popularity in your cluster and closeness to the cluster centroid.")
+
 elif model_selection == backend.models[3]:
   
    
