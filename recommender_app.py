@@ -106,7 +106,7 @@ st.markdown("""
 4. **Get Recommendations**: Click the recommendation button for your model
 5. **Compare Results**: Try different algorithms to see varied suggestions
 """)
-st.write("Debug similarity scores:", df.head())
+
 
 # ------- Functions ------
 @st.cache_data
@@ -634,3 +634,4 @@ elif model_selection == backend.models[7]:  # Classification with Embeddings
                 st.dataframe(df.style.format({"SCORE": "{:.3f}"}))
             else:
                 st.warning("No recommendations found. Try selecting different courses.")
+st.write("Debug similarity scores:", df.head())               
