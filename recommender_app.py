@@ -249,9 +249,15 @@ if model_selection == backend.models[0]:
 
 # User profile model
 elif model_selection == backend.models[1]:
-    profile_sim_threshold = st.sidebar.slider('User Profile Similarity Threshold %', min_value=0, max_value=100, value=50, step=10)
-    top_courses = st.sidebar.slider('Number of Recommendations', min_value=1, max_value=50, value=10, step=1)
-    params = {'sim_threshold': profile_sim_threshold, 'top_courses': top_courses}
+    profile_score_threshold = st.sidebar.slider(
+        'User Profile Score Threshold',
+        min_value=0, max_value=50, value=10, step=1
+    )
+    top_courses = st.sidebar.slider(
+        'Number of Recommendations',
+        min_value=1, max_value=50, value=10, step=1
+    )
+    params = {'sim_threshold': profile_score_threshold, 'top_courses': top_courses}
 
 # Clustering model
 elif model_selection == backend.models[2]:
