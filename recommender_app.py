@@ -327,11 +327,22 @@ elif model_selection == backend.models[1]:
             threshold = params.get("sim_threshold", 50) / 100.0
             top_k = params.get("top_courses", 10)
             df = backend.predict("User Profile", [user_id], {"sim_threshold": threshold, "top_courses": top_k})
+
+            # 🔍 Debugging lines
+            st.write("Debug: Raw DataFrame shape:", df.shape)
+            st.write("Debug: First few rows:", df.head())
+            st.write("Debug: Score column unique values:", df['SCORE'].unique() if 'SCORE' in df.columns else "No SCORE column")
+
             if df.empty:
                 st.error("No recommendations—maybe lower the similarity threshold.")
             else:
                 st.subheader("📚 Your User-Profile Recommendations")
-                st.dataframe(df)
+                # Format scores to 3 decimals for clarity
+                if 'SCORE' in df.columns:
+                    st.dataframe(df.style.format({"SCORE": "{:.3f}"}))
+                else:
+                    st.dataframe(df)
+
 elif model_selection == backend.models[2]:
     if st.sidebar.button("🔎 Test Clustering"):
         ids = selected_courses_df["COURSE_ID"].tolist()
@@ -634,4 +645,4 @@ elif model_selection == backend.models[7]:  # Classification with Embeddings
                 st.dataframe(df.style.format({"SCORE": "{:.3f}"}))
             else:
                 st.warning("No recommendations found. Try selecting different courses.")
-st.write("Debug similarity scores:", df.head())               
+             
