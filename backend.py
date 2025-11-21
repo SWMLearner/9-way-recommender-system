@@ -472,12 +472,7 @@ def user_profile_recommendations(user_id, sim_threshold=0.0, top_courses=None):
 
 
     
-def train_clustering(n_clusters):
-    """Fit (and cache) a KMeans model on all course vectors."""
-    global CLUSTER_MODEL
-    vectors = load_course_vectors().values
-    CLUSTER_MODEL = KMeans(n_clusters=n_clusters, random_state=42)
-    CLUSTER_MODEL.fit(vectors)
+
 
 def clustering_recommendations(user_id, top_courses=10, pop_threshold=10):
     # Data
