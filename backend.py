@@ -485,10 +485,18 @@ def clustering_recommendations(user_id, top_courses=10, pop_threshold=10):
     # Create the user's profile vector and compute distance to their centroid
     user_profile_vec = USER_PROFILE_DF.loc[USER_PROFILE_DF["user"] == user_id, FEATURE_NAMES].values
     if user_profile_vec.size == 0:
-        # Fallback: approximate profile from enrolled courses
-        user_profile_vec = create_user_profile(user_id).reshape(1, -1)
-    cluster_id = cluster_df.loc[cluster_df["user"] == user_id, "cluster"].iloc[0]
+          user_profile_vec = create_user_profile(user_id).reshape(1, -1)
+
+# Try to get cluster from cluster_df
+    user_cluster_rows = cluster_df.loc[cluster_df["user"] == user_id, "cluster"]
+    if not user_cluster_rows.empty:
+         cluster_id = user_cluster_rows.iloc[0]
+    else:
+        cluster_id = model.predict(user_profile_vec)[0]
+
+# Distance to centroid
     user_distance = model.transform(user_profile_vec)[0][cluster_id]
+
 
     # Popularity within the user's cluster
     # Label every rating row with the user's cluster, then count enrollments per course per cluster
