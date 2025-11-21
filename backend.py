@@ -426,7 +426,7 @@ def user_profile_recommendations(user_id, sim_threshold=0.0, top_courses=None):
     user_ratings = ratings[ratings['user'] == user_id]
     enrolled_course_ids = user_ratings['item'].tolist()
 
-    # Build user profile vector
+    # Build user profile vector (weighted by ratings)
     user_profile = create_user_profile(user_id).reshape(1, -1)
 
     # Collect candidate courses (not already enrolled)
@@ -437,15 +437,15 @@ def user_profile_recommendations(user_id, sim_threshold=0.0, top_courses=None):
     candidate_indices = [id_idx_dict[cid] for cid in candidate_courses if cid in id_idx_dict]
     candidate_matrix = course_vectors.loc[candidate_indices].values
 
-    # Compute cosine similarities in one shot
-    sims = cosine_similarity(user_profile, candidate_matrix)[0]
+    # Compute raw dot product scores (no normalization)
+    scores = candidate_matrix.dot(user_profile.flatten())
 
     # Map scores back to course IDs
     recommendations = {
-        cid: sim for cid, sim in zip(candidate_courses, sims) if sim >= sim_threshold
+        cid: float(score) for cid, score in zip(candidate_courses, scores) if score >= sim_threshold
     }
 
-    # Sort by similarity score (descending)
+    # Sort by score (descending)
     sorted_recommendations = dict(
         sorted(recommendations.items(), key=lambda item: item[1], reverse=True)
     )
