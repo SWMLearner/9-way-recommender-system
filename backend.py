@@ -917,7 +917,7 @@ def predict(model_name, user_ids, params):
             user_id = user_ids[0]
             top_courses = params.get("top_courses", 10)
             pop_threshold = params.get("pop_threshold", 10)
-            return clustering_recommendations(user_id, top_courses=top_courses, pop_threshold=pop_threshold)
+        return clustering_recommendations(user_id, top_courses=top_courses, pop_threshold=pop_threshold)
  
         elif model_name == models[3]:
             n_comp = params["n_components"]
