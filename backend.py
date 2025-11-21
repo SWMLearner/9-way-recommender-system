@@ -403,15 +403,16 @@ def course_similarity_recommendations(idx_id_dict, id_idx_dict, enrolled_course_
     return sorted_res
 
 def create_user_profile(user_id):
-    """Create user profile vector from enrolled courses"""
+    """Create a user profile vector from enrolled courses.
+    Always returns a vector of length = number of features (FEATURE_NAMES)."""
     ratings = load_ratings()
     course_vectors = load_course_vectors()
     _, id_idx_dict = get_doc_dicts()
-    
+
     user_ratings = ratings[ratings['user'] == user_id]
-    profile = np.zeros(course_vectors.shape[1])
+    profile = np.zeros(course_vectors.shape[1])  # ensure correct dimensionality
     total_rating = 0
-    
+
     for _, row in user_ratings.iterrows():
         course_id = row['item']
         rating = row['rating']
@@ -421,11 +422,12 @@ def create_user_profile(user_id):
                 course_vec = course_vectors.loc[course_idx].values
                 profile += rating * course_vec
                 total_rating += rating
-    
+
     if total_rating > 0:
         profile /= total_rating
-    
-    return profile
+
+    return profile  # length matches course_vectors.shape[1], e.g. 14
+
 from sklearn.metrics.pairwise import cosine_similarity
 
 from sklearn.metrics.pairwise import cosine_similarity
