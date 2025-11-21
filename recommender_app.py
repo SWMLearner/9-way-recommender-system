@@ -261,30 +261,11 @@ elif model_selection == backend.models[1]:
 
 # Clustering model
 elif model_selection == backend.models[2]:
-    if st.sidebar.button("🔎 Test Clustering"):
-        ids = selected_courses_df["COURSE_ID"].tolist()
-        if not ids:
-            st.warning("Select at least one course first.")
-        else:
-            user_id = backend.add_new_ratings(ids)
-            pop_threshold = st.sidebar.slider("Cluster popularity threshold", 5, 100, 10, 5)
-            params = {"top_courses": st.sidebar.slider("Number of Recommendations", 1, 50, 10, 1),
-                      "pop_threshold": pop_threshold}
-            df = backend.predict("Clustering", [user_id], params)
-            if df.empty:
-                st.error("No recommendations found — try lowering the popularity threshold.")
-            else:
-                df = df.rename(columns={
-                    "Cluster ID": "Cluster",
-                })
-                st.subheader("📊 Clustering Recommendations")
-                st.dataframe(df.style.format({
-                    "Popularity": "{:.0f}",
-                    "Distance to Centroid": "{:.3f}",
-                }))
-                st.caption("ℹ️ Ranked by popularity in your cluster, then closeness to the cluster centroid.")
-
-
+       cluster_no = st.sidebar.slider('Number of Clusters', min_value=2, max_value=50, value=20, step=1)
+       top_courses = st.sidebar.slider('Courses per Cluster', min_value=1, max_value=10, value=3, step=1)
+       params = {'cluster_num': cluster_no, 'top_courses': top_courses}
+   
+        
 # Clustering with PCA
 elif model_selection == backend.models[3]:
     st.sidebar.subheader("PCA + KMeans Parameters")
@@ -378,22 +359,23 @@ elif model_selection == backend.models[2]:
             st.warning("Select at least one course first.")
         else:
             user_id = backend.add_new_ratings(ids)
+            pop_threshold = st.sidebar.slider("Cluster popularity threshold", 5, 100, 10, 5)
+            params = {"top_courses": st.sidebar.slider("Number of Recommendations", 1, 50, 10, 1),
+                      "pop_threshold": pop_threshold}
             df = backend.predict("Clustering", [user_id], params)
             if df.empty:
-                st.error("No recommendations found.")
+                st.error("No recommendations found — try lowering the popularity threshold.")
             else:
-                st.subheader("📊 Clustering Recommendations")
                 df = df.rename(columns={
                     "Cluster ID": "Cluster",
-                    "Popularity": "Enrollments",
-                    "Distance to Centroid": "Centroid Distance"
                 })
-               
+                st.subheader("📊 Clustering Recommendations")
                 st.dataframe(df.style.format({
-                    "Enrollments": "{:.0f}",
-                    "Centroid Distance": "{:.3f}"
+                    "Popularity": "{:.0f}",
+                    "Distance to Centroid": "{:.3f}",
                 }))
-                st.caption("ℹ️ Courses are ranked by popularity in your cluster and closeness to the cluster centroid.")
+                st.caption("ℹ️ Ranked by popularity in your cluster, then closeness to the cluster centroid.")
+
 
 elif model_selection == backend.models[3]:
   
