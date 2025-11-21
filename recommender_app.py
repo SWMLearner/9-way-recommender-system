@@ -106,7 +106,8 @@ st.markdown("""
 4. **Get Recommendations**: Click the recommendation button for your model
 5. **Compare Results**: Try different algorithms to see varied suggestions
 """)
-st.write("Sample similarity scores:", list(sorted_recommendations.values())[:10])
+st.write("Debug similarity scores:", df.head())
+
 # ------- Functions ------
 @st.cache_data
 def load_course_sims():
