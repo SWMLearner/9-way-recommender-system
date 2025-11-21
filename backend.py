@@ -465,23 +465,59 @@ def train_clustering(n_clusters):
     CLUSTER_MODEL = KMeans(n_clusters=n_clusters, random_state=42)
     CLUSTER_MODEL.fit(vectors)
 
-def clustering_recommendations(user_id, top_k):
-    user_vec = create_user_profile(user_id).reshape(1, -1)
-    if CLUSTER_MODEL is None:
-        raise ValueError("Call train_clustering first!")
-    cluster_label = CLUSTER_MODEL.predict(user_vec)[0]
-    center = CLUSTER_MODEL.cluster_centers_[cluster_label]
-    idx2id, id2idx = get_doc_dicts()
-    seen = set(load_ratings().query("user==@user_id")["item"])
-    candidates = set(idx2id.values()) - seen
-    scores = {}
-    for cid in candidates:
-        idx = id2idx[cid]
-        vec = load_course_vectors().iloc[idx].values
-        score = cosine_similarity([center], [vec])[0,0]
-        scores[cid] = score
-    top_items = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
-    return dict(top_items)
+def clustering_recommendations(user_id, top_courses=10, pop_threshold=10):
+    # Load data
+    ratings = load_ratings()
+    enrolled = ratings[ratings['user'] == user_id]['item'].tolist()
+    course_titles = get_title_map()
+
+    # Load pre-fitted KMeans model on user profiles
+    model = load_kmeans_model()   # <-- make sure you have a function that loads/fits KMeans
+    user_profile = create_user_profile(user_id).reshape(1, -1)
+
+    # Find cluster assignment
+    cluster_id = model.predict(user_profile)[0]
+
+    # Distance to centroid for this user
+    user_distance = model.transform(user_profile)[0][cluster_id]
+
+    # Build cluster popularity table
+    courses_cluster = ratings.merge(
+        pd.DataFrame({'user': model.labels_, 'cluster': model.labels_}),
+        left_on='user', right_on='user'
+    )
+    courses_cluster['count'] = 1
+    courses_cluster_grouped = courses_cluster.groupby(['cluster', 'item']).agg(
+        enrollments=('count', 'sum')
+    ).reset_index()
+
+    # Get popular courses in this cluster
+    cluster_courses = courses_cluster_grouped[courses_cluster_grouped['cluster'] == cluster_id]
+    popular_courses = cluster_courses[cluster_courses['enrollments'] >= pop_threshold]
+
+    # Filter out courses the user already took
+    unseen = popular_courses[~popular_courses['item'].isin(enrolled)]
+
+    # Build DataFrame with popularity + distance
+    results = []
+    for _, row in unseen.iterrows():
+        results.append({
+            "USER": user_id,
+            "COURSE_ID": row['item'],
+            "COURSE_TITLE": course_titles.get(row['item'], "Unknown"),
+            "Cluster ID": cluster_id,
+            "Popularity": row['enrollments'],
+            "Distance to Centroid": user_distance
+        })
+
+    return pd.DataFrame(results).sort_values(
+        by=["Popularity", "Distance to Centroid"],
+        ascending=[False, True]
+    ).head(top_courses)
+
+
+
+
 
 def pca_clustering_recommendations(n_components, n_clusters, pop_threshold):
     pipe = Pipeline([
@@ -877,15 +913,12 @@ def predict(model_name, user_ids, params):
                 courses.append(course_id)
                 titles.append(title_map.get(course_id, "Unknown Course"))
                 scores.append(score)
-        elif model_name == models[2]:
-            if CLUSTER_MODEL is None or CLUSTER_MODEL.n_clusters != params["cluster_num"]:
-                train_clustering(params["cluster_num"])
-            recs = clustering_recommendations(user_id, params["top_courses"])
-            for cid, score in recs.items():
-                users.append(user_id)
-                courses.append(cid)
-                titles.append(get_title_map().get(cid, "Unknown Course"))
-                scores.append(score)
+        elif model_name == "Clustering":
+            user_id = user_ids[0]
+            top_courses = params.get("top_courses", 10)
+            pop_threshold = params.get("pop_threshold", 10)
+            return clustering_recommendations(user_id, top_courses=top_courses, pop_threshold=pop_threshold)
+ 
         elif model_name == models[3]:
             n_comp = params["n_components"]
             n_clust = params["n_clusters"]
@@ -909,23 +942,8 @@ def predict(model_name, user_ids, params):
                         courses.append(cid)
                         titles.append(get_title_map().get(cid, "Unknown Course"))
                         scores.append(score_dict[uid][i])
+        
         elif model_name == models[5]:
-            # NMF
-            n_factors = params.get("n_factors", 32)
-            n_epochs = params.get("n_epochs", 50)
-            top_k = params.get("top_k", 10)
-            
-            # Train model if not already trained
-            if NMF_MODEL is None or (NMF_MODEL.n_factors != n_factors or NMF_MODEL.n_epochs != n_epochs):
-                train_nmf_model(n_factors, n_epochs)
-            
-            res = nmf_recommendations(user_id, top_k)
-            for course_id, score in res.items():
-                users.append(user_id)
-                courses.append(course_id)
-                titles.append(title_map.get(course_id, "Unknown Course"))
-                scores.append(score)
-        elif model_name == models[6]:
             # Neural Network
             embedding_size = params.get("embedding_size", 16)
             epochs = params.get("epochs", 10)
@@ -948,7 +966,7 @@ def predict(model_name, user_ids, params):
                         scores.append(score)
                 except Exception as e:
                     logger.error(f"Error generating NN recommendations for user {user_id}: {str(e)}")
-        elif model_name == models[7]:
+        elif model_name == models[6]:
             top_k = params.get("top_k", 10)
             for user_id in user_ids:
                 try:
@@ -962,7 +980,7 @@ def predict(model_name, user_ids, params):
                 except Exception as e:
                       logger.error(f"Regression embedding error for user {user_id}: {str(e)}")
     
-        elif model_name == models[8]:  # Classification with Embedding Features
+        elif model_name == models[7]:  # Classification with Embedding Features
             top_k = params.get("top_k", 10)
             for user_id in user_ids:
                 try:
