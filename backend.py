@@ -412,7 +412,9 @@ def create_user_profile(user_id):
         profile /= total_rating
     
     return profile
-def user_profile_recommendations(user_id, sim_threshold, top_courses=None):
+from sklearn.metrics.pairwise import cosine_similarity
+
+def user_profile_recommendations(user_id, sim_threshold=0.0, top_courses=None):
     course_vectors = load_course_vectors()
     idx_id_dict, id_idx_dict = get_doc_dicts()
     ratings = load_ratings()
@@ -420,13 +422,8 @@ def user_profile_recommendations(user_id, sim_threshold, top_courses=None):
     enrolled_course_ids = user_ratings['item'].tolist()
     all_courses = set(idx_id_dict.values())
     unselected_course_ids = all_courses.difference(enrolled_course_ids)
-    user_profile = create_user_profile(user_id)
-    
-    # Normalize the user profile
-    user_norm = np.linalg.norm(user_profile)
-    if user_norm > 0:
-        user_profile = user_profile / user_norm
-    
+    user_profile = create_user_profile(user_id).reshape(1, -1)
+
     recommendations = {}
     for candidate_course in unselected_course_ids:
         if candidate_course not in id_idx_dict:
@@ -434,32 +431,21 @@ def user_profile_recommendations(user_id, sim_threshold, top_courses=None):
         candidate_idx = id_idx_dict[candidate_course]
         if candidate_idx not in course_vectors.index:
             continue
-        candidate_vec = course_vectors.loc[candidate_idx].values
-        
-        # Normalize candidate vector
-        candidate_norm = np.linalg.norm(candidate_vec)
-        if candidate_norm > 0:
-            candidate_vec_normalized = candidate_vec / candidate_norm
-        else:
-            continue
-            
-        # Calculate cosine similarity manually
-        dot_product = np.dot(user_profile, candidate_vec_normalized)
-        sim = dot_product  # Since both vectors are normalized
-        
+        candidate_vec = course_vectors.loc[candidate_idx].values.reshape(1, -1)
+
+        # Use sklearn cosine similarity
+        sim = cosine_similarity(user_profile, candidate_vec)[0][0]
+
         if sim >= sim_threshold:
             recommendations[candidate_course] = sim
-    
+
     # Sort by similarity score (descending) and limit to top_courses
     sorted_recommendations = dict(sorted(recommendations.items(), key=lambda item: item[1], reverse=True))
-    
     if top_courses is not None:
         sorted_recommendations = dict(list(sorted_recommendations.items())[:top_courses])
-    print(f"User profile norm: {np.linalg.norm(user_profile)}")
-    print(f"Sample candidate vector: {candidate_vec_normalized[:5]}")  # First 5 elements
-    print(f"Similarity scores sample: {list(recommendations.values())[:5]}")
 
     return sorted_recommendations
+
     
 def train_clustering(n_clusters):
     """Fit (and cache) a KMeans model on all course vectors."""
