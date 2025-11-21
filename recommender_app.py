@@ -330,23 +330,24 @@ elif model_selection == backend.models[1]:
             st.warning("Select at least one course first.")
         else:
             user_id = backend.add_new_ratings(ids)
-            threshold = params.get("sim_threshold", 10)   # use raw score threshold directly
-
+            threshold = params.get("sim_threshold", 10)   # <-- updated threshold
             top_k = params.get("top_courses", 10)
             df = backend.predict("User Profile", [user_id], {"sim_threshold": threshold, "top_courses": top_k})
 
-            # 🔍 Debugging lines
-            st.write("Debug: Raw DataFrame shape:", df.shape)
-            st.write("Debug: First few rows:", df.head())
-            st.write("Debug: Score column unique values:", df['SCORE'].unique() if 'SCORE' in df.columns else "No SCORE column")
+            # 🔍 Debugging lines (remove these once you’re confident)
+            # st.write("Debug: Raw DataFrame shape:", df.shape)
+            # st.write("Debug: First few rows:", df.head())
+            # st.write("Debug: Score column unique values:", df['SCORE'].unique() if 'SCORE' in df.columns else "No SCORE column")
 
             if df.empty:
-                st.error("No recommendations—maybe lower the similarity threshold.")
+                st.error("No recommendations—maybe lower the score threshold.")
             else:
                 st.subheader("📚 Your User-Profile Recommendations")
-                # Format scores to 3 decimals for clarity
+                # ✅ Replace SCORE column name and format nicely
                 if 'SCORE' in df.columns:
-                    st.dataframe(df.style.format({"SCORE": "{:.3f}"}))
+                    df = df.rename(columns={"SCORE": "Match Score"})
+                    st.dataframe(df.style.format({"Match Score": "{:.2f}"}))
+                    st.caption("ℹ️ Match Score indicates how strongly this course aligns with your interests.")
                 else:
                     st.dataframe(df)
 
