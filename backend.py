@@ -414,37 +414,47 @@ def create_user_profile(user_id):
     return profile
 from sklearn.metrics.pairwise import cosine_similarity
 
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
 def user_profile_recommendations(user_id, sim_threshold=0.0, top_courses=None):
+    # Load data
     course_vectors = load_course_vectors()
     idx_id_dict, id_idx_dict = get_doc_dicts()
     ratings = load_ratings()
     user_ratings = ratings[ratings['user'] == user_id]
     enrolled_course_ids = user_ratings['item'].tolist()
-    all_courses = set(idx_id_dict.values())
-    unselected_course_ids = all_courses.difference(enrolled_course_ids)
+
+    # Build user profile vector
     user_profile = create_user_profile(user_id).reshape(1, -1)
 
-    recommendations = {}
-    for candidate_course in unselected_course_ids:
-        if candidate_course not in id_idx_dict:
-            continue
-        candidate_idx = id_idx_dict[candidate_course]
-        if candidate_idx not in course_vectors.index:
-            continue
-        candidate_vec = course_vectors.loc[candidate_idx].values.reshape(1, -1)
+    # Collect candidate courses (not already enrolled)
+    all_courses = set(idx_id_dict.values())
+    candidate_courses = [cid for cid in all_courses if cid not in enrolled_course_ids]
 
-        # Use sklearn cosine similarity
-        sim = cosine_similarity(user_profile, candidate_vec)[0][0]
+    # Build candidate matrix
+    candidate_indices = [id_idx_dict[cid] for cid in candidate_courses if cid in id_idx_dict]
+    candidate_matrix = course_vectors.loc[candidate_indices].values
 
-        if sim >= sim_threshold:
-            recommendations[candidate_course] = sim
+    # Compute cosine similarities in one shot
+    sims = cosine_similarity(user_profile, candidate_matrix)[0]
 
-    # Sort by similarity score (descending) and limit to top_courses
-    sorted_recommendations = dict(sorted(recommendations.items(), key=lambda item: item[1], reverse=True))
+    # Map scores back to course IDs
+    recommendations = {
+        cid: sim for cid, sim in zip(candidate_courses, sims) if sim >= sim_threshold
+    }
+
+    # Sort by similarity score (descending)
+    sorted_recommendations = dict(
+        sorted(recommendations.items(), key=lambda item: item[1], reverse=True)
+    )
+
+    # Limit to top_courses if specified
     if top_courses is not None:
         sorted_recommendations = dict(list(sorted_recommendations.items())[:top_courses])
 
     return sorted_recommendations
+
 
     
 def train_clustering(n_clusters):
