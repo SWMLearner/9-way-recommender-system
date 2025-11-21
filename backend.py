@@ -410,7 +410,7 @@ def create_user_profile(user_id):
     _, id_idx_dict = get_doc_dicts()
 
     user_ratings = ratings[ratings['user'] == user_id]
-    profile = np.zeros(course_vectors.shape[1])  # ensure correct dimensionality
+    profile = np.zeros(len(FEATURE_NAMES))  # ensure correct dimensionality
     total_rating = 0
 
     for _, row in user_ratings.iterrows():
@@ -420,13 +420,19 @@ def create_user_profile(user_id):
             course_idx = id_idx_dict[course_id]
             if course_idx in course_vectors.index:
                 course_vec = course_vectors.loc[course_idx].values
+                # truncate or pad course_vec to match FEATURE_NAMES length
+                if len(course_vec) > len(FEATURE_NAMES):
+                    course_vec = course_vec[:len(FEATURE_NAMES)]
+                elif len(course_vec) < len(FEATURE_NAMES):
+                    course_vec = np.pad(course_vec, (0, len(FEATURE_NAMES) - len(course_vec)))
                 profile += rating * course_vec
                 total_rating += rating
 
     if total_rating > 0:
         profile /= total_rating
 
-    return profile  # length matches course_vectors.shape[1], e.g. 14
+    return profile  # length = len(FEATURE_NAMES)
+
 
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -487,17 +493,13 @@ def clustering_recommendations(user_id, top_courses=10, pop_threshold=10):
     # Create the user's profile vector and compute distance to their centroid
     user_profile_vec = USER_PROFILE_DF.loc[USER_PROFILE_DF["user"] == user_id, FEATURE_NAMES].values
     if user_profile_vec.size == 0:
-          user_profile_vec = create_user_profile(user_id).reshape(1, -1)
-
-# Try to get cluster from cluster_df
-    user_cluster_rows = cluster_df.loc[cluster_df["user"] == user_id, "cluster"]
-    if not user_cluster_rows.empty:
-         cluster_id = user_cluster_rows.iloc[0]
+        user_profile_vec = create_user_profile(user_id).reshape(1, -1)
     else:
-         cluster_id = model.predict(user_profile_vec)[0]
+        user_profile_vec = user_profile_vec.reshape(1, -1)
 
-# Distance to centroid
+    cluster_id = model.predict(user_profile_vec)[0]
     user_distance = model.transform(user_profile_vec)[0][cluster_id]
+
 
 
     # Popularity within the user's cluster
