@@ -913,7 +913,7 @@ def predict(model_name, user_ids, params):
                 courses.append(course_id)
                 titles.append(title_map.get(course_id, "Unknown Course"))
                 scores.append(score)
-        elif model_name == "Clustering":
+        elif model_name == models[2]:
             user_id = user_ids[0]
             top_courses = params.get("top_courses", 10)
             pop_threshold = params.get("pop_threshold", 10)
