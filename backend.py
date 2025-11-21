@@ -494,7 +494,7 @@ def clustering_recommendations(user_id, top_courses=10, pop_threshold=10):
     if not user_cluster_rows.empty:
          cluster_id = user_cluster_rows.iloc[0]
     else:
-        cluster_id = model.predict(user_profile_vec)[0]
+         cluster_id = model.predict(user_profile_vec)[0]
 
 # Distance to centroid
     user_distance = model.transform(user_profile_vec)[0][cluster_id]
