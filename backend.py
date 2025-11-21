@@ -917,7 +917,16 @@ def predict(model_name, user_ids, params):
             user_id = user_ids[0]
             top_courses = params.get("top_courses", 10)
             pop_threshold = params.get("pop_threshold", 10)
-        return clustering_recommendations(user_id, top_courses=top_courses, pop_threshold=pop_threshold)
+
+            df = clustering_recommendations(user_id, top_courses=top_courses, pop_threshold=pop_threshold)
+
+            for _, row in df.iterrows():
+                users.append(row["USER"])
+                courses.append(row["COURSE_ID"])
+                titles.append(row["COURSE_TITLE"])
+        # You can choose what to store in SCORE: popularity, distance, or both
+                scores.append(f"Pop:{row['Popularity']} | Dist:{row['Distance to Centroid']:.3f}")
+
  
         elif model_name == models[3]:
             n_comp = params["n_components"]
