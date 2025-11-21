@@ -416,6 +416,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+st.write("Sample similarity scores:", list(sorted_recommendations.values())[:10])
 
 def user_profile_recommendations(user_id, sim_threshold=0.0, top_courses=None):
     # Load data
