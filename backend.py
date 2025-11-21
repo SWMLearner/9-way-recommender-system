@@ -276,6 +276,20 @@ FEATURE_NAMES = list(USER_PROFILE_DF.columns[1:])
 scaler = StandardScaler()
 USER_PROFILE_DF[FEATURE_NAMES] = scaler.fit_transform(USER_PROFILE_DF[FEATURE_NAMES])
 CLUSTER_MODEL = None
+def load_kmeans_model(n_clusters: int = 10):
+    """Fit (and cache) a KMeans model on standardized USER_PROFILE_DF features."""
+    global CLUSTER_MODEL
+    if CLUSTER_MODEL is None:
+        X = USER_PROFILE_DF[FEATURE_NAMES].values  # standardized already
+        CLUSTER_MODEL = KMeans(n_clusters=n_clusters, random_state=42)
+        CLUSTER_MODEL.fit(X)
+    return CLUSTER_MODEL
+def get_user_cluster_df():
+    """Return a DataFrame with columns ['user', 'cluster'] for all users."""
+    model = load_kmeans_model()
+    labels = model.labels_
+    return pd.DataFrame({"user": USER_PROFILE_DF["user"], "cluster": labels})
+
 models = ("Course Similarity",
           "User Profile",
           "Clustering",
@@ -466,51 +480,58 @@ def train_clustering(n_clusters):
     CLUSTER_MODEL.fit(vectors)
 
 def clustering_recommendations(user_id, top_courses=10, pop_threshold=10):
-    # Load data
+    # Data
     ratings = load_ratings()
-    enrolled = ratings[ratings['user'] == user_id]['item'].tolist()
     course_titles = get_title_map()
 
-    # Load pre-fitted KMeans model on user profiles
-    model = load_kmeans_model()   # <-- make sure you have a function that loads/fits KMeans
-    user_profile = create_user_profile(user_id).reshape(1, -1)
+    # Model and user cluster
+    model = load_kmeans_model()
+    cluster_df = get_user_cluster_df()
+    # Create the user's profile vector and compute distance to their centroid
+    user_profile_vec = USER_PROFILE_DF.loc[USER_PROFILE_DF["user"] == user_id, FEATURE_NAMES].values
+    if user_profile_vec.size == 0:
+        # Fallback: approximate profile from enrolled courses
+        user_profile_vec = create_user_profile(user_id).reshape(1, -1)
+    cluster_id = cluster_df.loc[cluster_df["user"] == user_id, "cluster"].iloc[0]
+    user_distance = model.transform(user_profile_vec)[0][cluster_id]
 
-    # Find cluster assignment
-    cluster_id = model.predict(user_profile)[0]
-
-    # Distance to centroid for this user
-    user_distance = model.transform(user_profile)[0][cluster_id]
-
-    # Build cluster popularity table
-    courses_cluster = ratings.merge(
-        pd.DataFrame({'user': model.labels_, 'cluster': model.labels_}),
-        left_on='user', right_on='user'
+    # Popularity within the user's cluster
+    # Label every rating row with the user's cluster, then count enrollments per course per cluster
+    ratings_labeled = ratings.merge(cluster_df, on="user", how="left")
+    enrolls = (
+        ratings_labeled
+        .assign(count=1)
+        .groupby(["cluster", "item"])["count"]
+        .sum()
+        .reset_index()
+        .rename(columns={"count": "enrollments"})
     )
-    courses_cluster['count'] = 1
-    courses_cluster_grouped = courses_cluster.groupby(['cluster', 'item']).agg(
-        enrollments=('count', 'sum')
-    ).reset_index()
 
-    # Get popular courses in this cluster
-    cluster_courses = courses_cluster_grouped[courses_cluster_grouped['cluster'] == cluster_id]
-    popular_courses = cluster_courses[cluster_courses['enrollments'] >= pop_threshold]
+    # Candidate pool: popular courses in the user's cluster
+    cluster_popular = enrolls[(enrolls["cluster"] == cluster_id) & (enrolls["enrollments"] >= pop_threshold)]
 
-    # Filter out courses the user already took
-    unseen = popular_courses[~popular_courses['item'].isin(enrolled)]
+    # Exclude courses already taken by the user
+    taken = set(ratings[ratings["user"] == user_id]["item"])
+    unseen = cluster_popular[~cluster_popular["item"].isin(taken)]
 
-    # Build DataFrame with popularity + distance
+    # Build results with popularity + distance; rank by popularity desc, distance asc
     results = []
     for _, row in unseen.iterrows():
+        cid = row["item"]
         results.append({
             "USER": user_id,
-            "COURSE_ID": row['item'],
-            "COURSE_TITLE": course_titles.get(row['item'], "Unknown"),
+            "COURSE_ID": cid,
+            "COURSE_TITLE": course_titles.get(cid, "Unknown Course"),
             "Cluster ID": cluster_id,
-            "Popularity": row['enrollments'],
-            "Distance to Centroid": user_distance
+            "Popularity": int(row["enrollments"]),
+            "Distance to Centroid": float(user_distance),
         })
 
-    return pd.DataFrame(results).sort_values(
+    df = pd.DataFrame(results)
+    if df.empty:
+        return df
+
+    return df.sort_values(
         by=["Popularity", "Distance to Centroid"],
         ascending=[False, True]
     ).head(top_courses)
