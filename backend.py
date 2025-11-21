@@ -945,8 +945,9 @@ def predict(model_name, user_ids, params):
                 users.append(row["USER"])
                 courses.append(row["COURSE_ID"])
                 titles.append(row["COURSE_TITLE"])
-        # You can choose what to store in SCORE: popularity, distance, or both
+        # Put a readable combined score; frontend can split/format if desired
                 scores.append(f"Pop:{row['Popularity']} | Dist:{row['Distance to Centroid']:.3f}")
+
 
  
         elif model_name == models[3]:
