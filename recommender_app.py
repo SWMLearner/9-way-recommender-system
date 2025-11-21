@@ -368,6 +368,7 @@ elif model_selection == backend.models[2]:
                     "Popularity": "Enrollments",
                     "Distance to Centroid": "Centroid Distance"
                 })
+               
                 st.dataframe(df.style.format({
                     "Enrollments": "{:.0f}",
                     "Centroid Distance": "{:.3f}"
