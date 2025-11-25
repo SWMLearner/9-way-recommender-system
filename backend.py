@@ -605,7 +605,7 @@ def pca_clustering_recommendations(n_components, n_clusters, pop_threshold):
             "Cluster ID": cluster_id,
             "COURSE_ID": course_id,
             "COURSE_TITLE": course_titles.get(course_id, "Unknown"),
-            "Popularity": int(row["enrollments"]),
+            "Popularity": int(row['enrollments']),
             "Distance to Centroid": course_distance
         })
 
