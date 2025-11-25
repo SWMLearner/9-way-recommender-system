@@ -557,15 +557,6 @@ def clustering_recommendations(user_id, top_courses=10, pop_threshold=10):
 
 
 def pca_clustering_recommendations(n_components, n_clusters, pop_threshold):
-    """
-    Returns a dict of {user_id: [recommended_course_ids]}.
-    - Fits PCA+KMeans on USER_PROFILE_DF
-    - Assigns clusters to existing users
-    - Builds popularity per cluster from current RATINGS_DF
-    - For each user in 'predict' (frontend passes user_ids), we can look up recommendations via recs[uid]
-      without changing the frontend logic.
-    """
-    # Build PCA + KMeans pipeline and fit on standardized user profiles
     pipe = Pipeline([
         ("scaler", StandardScaler()),
         ("pca", PCA(n_components=n_components)),
@@ -574,15 +565,11 @@ def pca_clustering_recommendations(n_components, n_clusters, pop_threshold):
     X = USER_PROFILE_DF[FEATURE_NAMES].values
     pipe.fit(X)
 
-    # Cluster mapping for known users (present in USER_PROFILE_DF)
     labels = pipe.named_steps["km"].labels_
     cluster_df = pd.DataFrame({"user": USER_PROFILE_DF["user"], "cluster": labels})
 
-    # Use the current ratings (includes newly added users) for popularity
     ratings = load_ratings()
     ratings_labeled = ratings.merge(cluster_df, on="user", how="left")
-
-    # Popularity per cluster (count enrollments)
     enrolls = (
         ratings_labeled
         .assign(count=1)
@@ -592,49 +579,45 @@ def pca_clustering_recommendations(n_components, n_clusters, pop_threshold):
         .rename(columns={"count": "enrollments"})
     )
 
-    # Build a popularity pool per cluster with threshold
-    popular = (
-        enrolls[enrolls["enrollments"] >= pop_threshold]
-        .groupby("cluster")["item"]
-        .apply(set)
-        .to_dict()
+    course_titles = get_title_map()
+    course_vectors = load_course_vectors()
+    _, id_idx_dict = get_doc_dicts()
+
+    results = []
+    for _, row in enrolls.iterrows():
+        cluster_id = row["cluster"]
+        course_id = row["item"]
+        if course_id in id_idx_dict:
+            course_idx = id_idx_dict[course_id]
+            if course_idx in course_vectors.index:
+                course_vec = course_vectors.loc[course_idx].values.reshape(1, -1)
+                course_pca_vec = pipe.named_steps["pca"].transform(
+                    pipe.named_steps["scaler"].transform(course_vec)
+                )
+                centroid = pipe.named_steps["km"].cluster_centers_[cluster_id]
+                course_distance = np.linalg.norm(course_pca_vec[0] - centroid)
+            else:
+                course_distance = None
+        else:
+            course_distance = None
+
+        results.append({
+            "Cluster ID": cluster_id,
+            "COURSE_ID": course_id,
+            "COURSE_TITLE": course_titles.get(course_id, "Unknown"),
+            "Popularity": int(row["enrollments"]),
+            "Distance to Centroid": course_distance
+        })
+
+    df = pd.DataFrame(results)
+    if df.empty:
+        return df
+
+    return df.sort_values(
+        by=["Cluster ID", "Popularity", "Distance to Centroid"],
+        ascending=[True, False, True]
     )
 
-    # Prepare recommendations for all users we might query later
-    # 1) Known users: directly via cluster_df
-    recs = {}
-    known_users = set(cluster_df["user"])
-    for uid in known_users:
-        cluster_id = cluster_df.loc[cluster_df["user"] == uid, "cluster"].iloc[0]
-        taken = set(ratings[ratings["user"] == uid]["item"])
-        pool = popular.get(cluster_id, set())
-        recs[uid] = list(pool - taken)
-
-    # 2) Unknown users (e.g., newly added via add_new_ratings):
-    #    compute their profile, assign a cluster, then recommend from that cluster.
-    unknown_users = set(ratings["user"]) - known_users
-    if unknown_users:
-        # Precompute cluster centroids for consistency
-        km = pipe.named_steps["km"]
-        scaler = pipe.named_steps["scaler"]
-        pca = pipe.named_steps["pca"]
-
-        for uid in unknown_users:
-            # Build user profile vector (same feature space as USER_PROFILE_DF)
-            user_profile_vec = USER_PROFILE_DF.loc[USER_PROFILE_DF["user"] == uid, FEATURE_NAMES].values
-            if user_profile_vec.size == 0:
-                user_profile_vec = create_user_profile(uid).reshape(1, -1)
-            else:
-                user_profile_vec = user_profile_vec.reshape(1, -1)
-
-            user_pca = pca.transform(scaler.transform(user_profile_vec))
-            cluster_id = km.predict(user_pca)[0]
-
-            taken = set(ratings[ratings["user"] == uid]["item"])
-            pool = popular.get(cluster_id, set())
-            recs[uid] = list(pool - taken)
-
-    return recs
 
 
 def item_knn_recommendations(n_neighbors: int, top_k: int) -> tuple[dict, dict]:
