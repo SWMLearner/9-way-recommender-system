@@ -433,7 +433,7 @@ elif model_selection == backend.models[3]:
                 for uid, grp in test_labeled.groupby("user")
             ])
             
-                st.success("PCA + KMeans training completed!")
+       st.success("PCA + KMeans training completed!")
 
         # Personalized recommendations via backend (added)
         if st.session_state.get('test_user_id'):
