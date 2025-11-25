@@ -392,7 +392,7 @@ elif model_selection == backend.models[2]:
             st.warning("Select at least one course first.")
         else:
             user_id = backend.add_new_ratings(ids)
-            pop_threshold = st.sidebar.slider("Cluster popularity threshold", 5, 100, 10, 5)
+            
             
             df = backend.predict("Clustering", [user_id], params)
             if df.empty:
