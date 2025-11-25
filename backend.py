@@ -483,27 +483,24 @@ def user_profile_recommendations(user_id, sim_threshold=0.0, top_courses=None):
 
 
 def clustering_recommendations(user_id, top_courses=10, pop_threshold=10):
-    # Data
+    # Load data
     ratings = load_ratings()
+    enrolled = ratings[ratings['user'] == user_id]['item'].tolist()
     course_titles = get_title_map()
+    course_vectors = load_course_vectors()
+    _, id_idx_dict = get_doc_dicts()
 
-    # Model and user cluster
+    # Load pre-fitted KMeans model on user profiles
     model = load_kmeans_model()
-    cluster_df = get_user_cluster_df()
-    # Create the user's profile vector and compute distance to their centroid
     user_profile_vec = USER_PROFILE_DF.loc[USER_PROFILE_DF["user"] == user_id, FEATURE_NAMES].values
     if user_profile_vec.size == 0:
         user_profile_vec = create_user_profile(user_id).reshape(1, -1)
-    else:
-        user_profile_vec = user_profile_vec.reshape(1, -1)
 
+    # Find cluster assignment
     cluster_id = model.predict(user_profile_vec)[0]
-    user_distance = model.transform(user_profile_vec)[0][cluster_id]
 
-
-
-    # Popularity within the user's cluster
-    # Label every rating row with the user's cluster, then count enrollments per course per cluster
+    # Build cluster popularity table
+    cluster_df = get_user_cluster_df()
     ratings_labeled = ratings.merge(cluster_df, on="user", how="left")
     enrolls = (
         ratings_labeled
@@ -514,24 +511,36 @@ def clustering_recommendations(user_id, top_courses=10, pop_threshold=10):
         .rename(columns={"count": "enrollments"})
     )
 
-    # Candidate pool: popular courses in the user's cluster
-    cluster_popular = enrolls[(enrolls["cluster"] == cluster_id) & (enrolls["enrollments"] >= pop_threshold)]
+    # Get popular courses in this cluster
+    cluster_courses = enrolls[(enrolls["cluster"] == cluster_id) & (enrolls["enrollments"] >= pop_threshold)]
 
-    # Exclude courses already taken by the user
-    taken = set(ratings[ratings["user"] == user_id]["item"])
-    unseen = cluster_popular[~cluster_popular["item"].isin(taken)]
+    # Filter out courses the user already took
+    unseen = cluster_courses[~cluster_courses["item"].isin(enrolled)]
 
-    # Build results with popularity + distance; rank by popularity desc, distance asc
+    # Get cluster centroid
+    centroid = model.cluster_centers_[cluster_id]
+
+    # Build DataFrame with popularity + course-specific distance
     results = []
     for _, row in unseen.iterrows():
-        cid = row["item"]
+        course_id = row['item']
+        if course_id in id_idx_dict:
+            course_idx = id_idx_dict[course_id]
+            if course_idx in course_vectors.index:
+                course_vec = course_vectors.loc[course_idx].values
+                course_distance = np.linalg.norm(course_vec - centroid)
+            else:
+                course_distance = None
+        else:
+            course_distance = None
+
         results.append({
             "USER": user_id,
-            "COURSE_ID": cid,
-            "COURSE_TITLE": course_titles.get(cid, "Unknown Course"),
+            "COURSE_ID": course_id,
+            "COURSE_TITLE": course_titles.get(course_id, "Unknown"),
             "Cluster ID": cluster_id,
-            "Popularity": int(row["enrollments"]),
-            "Distance to Centroid": float(user_distance),
+            "Popularity": int(row['enrollments']),
+            "Distance to Centroid": course_distance
         })
 
     df = pd.DataFrame(results)
