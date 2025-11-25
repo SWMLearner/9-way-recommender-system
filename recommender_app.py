@@ -291,19 +291,13 @@ elif model_selection == backend.models[3]:
         value=30,
         step=5
     )
-    top_courses = st.sidebar.slider(   # ✅ new slider
-        "Number of Recommendations",
-        min_value=1,
-        max_value=50,
-        value=10,
-        step=1
-    )
+    
 
     params = {
         "n_components": n_components,
         "n_clusters": n_clusters,
         "pop_threshold": pop_threshold,
-        "top_courses": top_courses
+        
     }
 
 
