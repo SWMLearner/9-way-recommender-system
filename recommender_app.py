@@ -267,12 +267,45 @@ elif model_selection == backend.models[2]:
    
         
 # Clustering with PCA
+# Clustering with PCA
 elif model_selection == backend.models[3]:
     st.sidebar.subheader("PCA + KMeans Parameters")
-    n_components = st.sidebar.slider("PCA Components", min_value=1, max_value=len(FEATURE_NAMES), value=5, step=1)
-    n_clusters = st.sidebar.slider("KMeans Clusters", min_value=2, max_value=20, value=9, step=1)
-    pop_threshold = st.sidebar.slider("Min Enrollments for Popularity", min_value=10, max_value=100, value=30, step=5)
-    params = {"n_components": n_components, "n_clusters": n_clusters, "pop_threshold": pop_threshold}
+    n_components = st.sidebar.slider(
+        "PCA Components",
+        min_value=1,
+        max_value=len(FEATURE_NAMES),
+        value=5,
+        step=1
+    )
+    n_clusters = st.sidebar.slider(
+        "KMeans Clusters",
+        min_value=2,
+        max_value=20,
+        value=9,
+        step=1
+    )
+    pop_threshold = st.sidebar.slider(
+        "Min Enrollments for Popularity",
+        min_value=10,
+        max_value=100,
+        value=30,
+        step=5
+    )
+    top_courses = st.sidebar.slider(   # ✅ new slider
+        "Number of Recommendations",
+        min_value=1,
+        max_value=50,
+        value=10,
+        step=1
+    )
+
+    params = {
+        "n_components": n_components,
+        "n_clusters": n_clusters,
+        "pop_threshold": pop_threshold,
+        "top_courses": top_courses
+    }
+
 
 # KNN model
 elif model_selection == backend.models[4]:
@@ -400,7 +433,27 @@ elif model_selection == backend.models[3]:
                 for uid, grp in test_labeled.groupby("user")
             ])
             
-        st.success("PCA + KMeans training completed!")
+                st.success("PCA + KMeans training completed!")
+
+        # Personalized recommendations via backend (added)
+        if st.session_state.get('test_user_id'):
+            user_id = st.session_state.test_user_id
+            with st.spinner("Generating PCA clustering recommendations..."):
+                df = backend.predict(
+                    "Clustering with PCA",
+                    [user_id],
+                    params  # includes n_components, n_clusters, pop_threshold, top_courses
+                )
+            if df.empty:
+                st.warning("No PCA recommendations found — try lowering the popularity threshold.")
+            else:
+                st.subheader("📊 PCA Clustering Recommendations")
+                st.dataframe(df.style.format({
+                    "Popularity": "{:.0f}",
+                    "Distance to Centroid": "{:.3f}",
+                }))
+                st.caption("ℹ️ Ranked by popularity in your PCA cluster, then closeness to the cluster centroid.")
+
         
         # Cluster statistics
         st.subheader("📊 Cluster Statistics")
