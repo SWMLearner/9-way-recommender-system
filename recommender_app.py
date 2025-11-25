@@ -433,28 +433,8 @@ elif model_selection == backend.models[3]:
                 for uid, grp in test_labeled.groupby("user")
             ])
             
-                st.success("PCA + KMeans training completed!")
+        st.success("PCA + KMeans training completed!")
 
-        # Personalized recommendations via backend (added)
-        if st.session_state.get('test_user_id'):
-            user_id = st.session_state.test_user_id
-            with st.spinner("Generating PCA clustering recommendations..."):
-                df = backend.predict(
-                    "Clustering with PCA",
-                    [user_id],
-                    params  # includes n_components, n_clusters, pop_threshold, top_courses
-                )
-            if df.empty:
-                st.warning("No PCA recommendations found — try lowering the popularity threshold.")
-            else:
-                st.subheader("📊 PCA Clustering Recommendations")
-                st.dataframe(df.style.format({
-                    "Popularity": "{:.0f}",
-                    "Distance to Centroid": "{:.3f}",
-                }))
-                st.caption("ℹ️ Ranked by popularity in your PCA cluster, then closeness to the cluster centroid.")
-
-        
         # Cluster statistics
         st.subheader("📊 Cluster Statistics")
         cluster_stats = cluster_df['cluster'].value_counts().sort_index()
