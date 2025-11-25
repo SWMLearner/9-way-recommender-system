@@ -393,8 +393,7 @@ elif model_selection == backend.models[2]:
         else:
             user_id = backend.add_new_ratings(ids)
             pop_threshold = st.sidebar.slider("Cluster popularity threshold", 5, 100, 10, 5)
-            params = {"top_courses": st.sidebar.slider("Number of Recommendations", 1, 50, 10, 1),
-                      "pop_threshold": pop_threshold}
+            
             df = backend.predict("Clustering", [user_id], params)
             if df.empty:
                 st.error("No recommendations found — try lowering the popularity threshold.")
