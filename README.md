@@ -28,3 +28,11 @@ streamlit run recommender_app.py
 - **International/Streamlit Cloud**: https://9-way-recommender-system.streamlit.app/
 - **China/ModelScope**: https://modelscope.ai/studios/SargamWadhwa/course-recommender-system
 - **Local Run**: `streamlit run recommender_app.py`
+
+## 🐳 Docker Deployment (Production-Ready)
+
+This application is containerized using Docker and automatically built via CI/CD for consistent, reproducible deployment across any environment.
+
+### Run Locally with One Command:
+```bash
+docker run -p 8501:8501 ghcr.io/swmlearner/9-way-recommender-system:latest
