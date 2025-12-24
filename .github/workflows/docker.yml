@@ -20,7 +20,6 @@ jobs:
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
-        # Use GitHub token for authentication (correct syntax)
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push Docker image
@@ -29,5 +28,4 @@ jobs:
         context: .
         push: true
         tags: |
-          # Convert repository owner to lowercase
-          ghcr.io/${{ github.repository_owner | lower }}/9-way-recommender-system:latest
+          ghcr.io/${{ github.repository_owner.toLowerCase() }}/9-way-recommender-system:latest
